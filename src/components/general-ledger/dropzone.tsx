@@ -16,17 +16,41 @@ import {
   toastMessage,
 } from "~/utils/helpers";
 import { FilePlus2 } from "lucide-react";
-import { getSignedUrls, uploadFile } from "~/utils/file";
+import { getFileByHash, getSignedUrls, uploadFile } from "~/utils/file";
 import { api } from "~/utils/api";
 import type { file_details } from "~/types/file";
+import type { Account } from "~/types/account";
 
-type Props = { user: User };
+type Props = { user: User; setParentFile: (file?: file_details) => void };
 
-export default function Dropzone({ user }: Props) {
+export default function Dropzone({ user, setParentFile }: Props) {
   const { supabaseClient: supabase } = useSessionContext();
   const addFileDetails = api.file.addFileDetails.useMutation();
 
   const [file, setFile] = useState<file_details>();
+
+  // Listen for changes to the file object and sync with the parent component
+  useEffect(() => {
+    setParentFile(file);
+  }, [file, setParentFile, supabase]);
+
+  const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
+    onError: (error) => {
+      console.error("Error:", error);
+    },
+  });
+
+  const getResults = useCallback(
+    async (resourceUrl: string) => {
+      const processedData = (await uploadToFormRecognizer.mutateAsync({
+        fileUrl: resourceUrl,
+        kind: "general_ledger",
+      })) as Account[];
+      console.log("Extracted General Ledger Data:", processedData);
+      return processedData;
+    },
+    [uploadToFormRecognizer]
+  );
 
   // Uploads files to supabase and creates the `file_details` record
   const uploadFiles = useCallback(
@@ -65,48 +89,85 @@ export default function Dropzone({ user }: Props) {
           // Add the new file to the state
           setFile(newFile);
 
-          // Store the file in a bucket using supabase storage
-          const fileName = getUniqueFileName(file.name, file_id);
-          const filePath = `${user.id}/${fileName}`;
-          const { data: uploadedFile, error: uploadError } = await uploadFile(
-            file,
-            filePath,
-            supabase
-          );
+          // Check if a file with the same file_hash already exists
+          const { data: existingFile, error: existingFileError } =
+            await getFileByHash(file_hash, supabase);
 
-          if (uploadError) {
-            toast.error(
-              toastMessage("Error uploading file.", "Please try again later.")
+          if (existingFile && !existingFileError) {
+            // If a file with the same hash exists, update the file details and return
+            console.log("Found existing file:", existingFile);
+
+            // Generate URL for the file
+            console.log("Generating signed URL for file:", existingFile);
+            const signedUrls = await getSignedUrls([existingFile], supabase);
+            const resourceUrl = signedUrls?.[0]?.signedUrl;
+            console.log("Signed URL:", resourceUrl);
+
+            // Mark the file as uploaded, and update details
+            newFile = {
+              ...newFile,
+              ...existingFile,
+              isUploading: false,
+              path: existingFile.path,
+              resourceUrl: resourceUrl ?? "",
+            };
+
+            // Update the file state
+            setFile(newFile);
+
+            // Process the file
+            if (!resourceUrl) return;
+            console.log("Processing file:", resourceUrl);
+            const results = await getResults(resourceUrl);
+            console.log("Results:", results);
+            setFile((prev) =>
+              prev?.id == newFile.id ? { ...prev, results } : prev
             );
-            return;
+          } else {
+            // Store the file in a bucket using supabase storage
+            const fileName = getUniqueFileName(file.name, file_id);
+            const filePath = `${user.id}/${fileName}`;
+            const { data: uploadedFile, error: uploadError } = await uploadFile(
+              file,
+              filePath,
+              supabase
+            );
+            if (uploadError) {
+              toast.error(
+                toastMessage("Error uploading file.", "Please try again later.")
+              );
+              return;
+            }
+
+            // Upload the file details
+            await addFileDetails.mutateAsync({
+              id: file_id,
+              size: BigInt(file.size),
+              name: file.name,
+              hash: file_hash,
+              path: uploadedFile.path,
+              category: "general-ledger",
+            });
+            console.log("Uploaded file:", newFile);
+
+            // Mark the file as uploaded
+            newFile = {
+              ...newFile,
+              isUploading: false,
+              path: uploadedFile.path,
+            };
+
+            // Update the file state
+            setFile(newFile);
           }
-
-          // Upload the file details
-          await addFileDetails.mutateAsync({
-            id: file_id,
-            size: BigInt(file.size),
-            name: file.name,
-            hash: file_hash,
-            path: uploadedFile.path,
-            category: "general-ledger",
-          });
-
-          // Mark the file as uploaded
-          newFile = {
-            ...newFile,
-            isUploading: false,
-            path: uploadedFile.path,
-          };
-          console.log("Uploaded file: ", newFile);
-          setFile(newFile);
         };
         reader.readAsText(file);
       });
     },
-    [addFileDetails, supabase, user.id]
+    [addFileDetails, supabase, user.id, getResults]
   );
 
-  // Listen for changes to the `file_details` and `file_processor_task` table
+  // Listen for changes to the `file_details` table
   useEffect(() => {
     supabase
       .channel("table-db-changes")
@@ -118,28 +179,44 @@ export default function Dropzone({ user }: Props) {
           table: "file_details",
         },
         (payload) => {
-          void (() => {
-            // void (async () => {
+          // void (() => {
+          void (async () => {
             console.log("file_details payload", payload);
             const oldFile = payload.old as file_details;
             const newFile = payload.new as file_details;
 
             switch (payload.eventType) {
-              // case "INSERT":
-              //   // Add the UI extension fields to the file
-              //   newFile.isUploading = false;
-              //   newFile.hasError = false;
+              case "INSERT":
+                // Add the UI extension fields to the file
+                newFile.isUploading = false;
+                newFile.hasError = false;
 
-              //   // Generate URL for the file
-              //   const signedUrls = await getSignedUrls([newFile], supabase);
+                // Ensure the file is the one we're tracking
+                if (file?.id != newFile.id) return;
 
-              //   // Add the signed URL to the file
-              //   if (signedUrls)
-              //     newFile.resourceUrl = signedUrls[0]?.signedUrl ?? "";
+                // Generate URL for the file
+                console.log("Generating signed URL for file:", newFile);
+                const signedUrls = await getSignedUrls([file], supabase);
+                const resourceUrl = signedUrls?.[0]?.signedUrl;
+                console.log("Signed URL:", resourceUrl);
 
-              //   // Add the file to the state
-              //   setFile(newFile);
-              //   break;
+                // Add the signed URL to the file
+                newFile.resourceUrl = resourceUrl ?? "";
+
+                // Update the file in the state
+                setFile((prev) =>
+                  prev?.id == newFile.id ? { ...prev, ...newFile } : prev
+                );
+
+                // Process the file
+                if (!resourceUrl) return;
+                console.log("Processing file:", resourceUrl);
+                const results = await getResults(resourceUrl);
+                console.log("Results:", results);
+                setFile((prev) =>
+                  prev?.id == newFile.id ? { ...prev, results } : prev
+                );
+                break;
               case "UPDATE":
                 // Add the UI extension fields to the file
                 newFile.isUploading =
@@ -163,7 +240,7 @@ export default function Dropzone({ user }: Props) {
       .subscribe((message) => {
         console.log("Supabase Realtime Status:", message);
       });
-  }, [supabase, file]);
+  }, [supabase, file, getResults]);
 
   // Functionality for managing the file upload
   const onDrop = useCallback(

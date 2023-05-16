@@ -30,3 +30,16 @@ export async function uploadFile(
           upsert: true,
         })) as { data: { path: string }; error: unknown };
   }
+
+  export async function getFileByHash(
+    hash: string,
+    supabase: SupabaseClient
+  )
+  {
+    return( await supabase
+      .from("file_details")
+      .select("*")
+      .eq("hash", hash)
+      .limit(1)
+      .single()) as { data: file_details; error: unknown};
+  }
