@@ -42,12 +42,10 @@ export default function Dropzone({ user, setParentFile }: Props) {
 
   const getResults = useCallback(
     async (resourceUrl: string) => {
-      const processedData = (await uploadToFormRecognizer.mutateAsync({
+      return (await uploadToFormRecognizer.mutateAsync({
         fileUrl: resourceUrl,
         kind: "general_ledger",
       })) as Account[];
-      console.log("Extracted General Ledger Data:", processedData);
-      return processedData;
     },
     [uploadToFormRecognizer]
   );
