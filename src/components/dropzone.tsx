@@ -83,8 +83,18 @@ export default function Dropzone({
             created_at: new Date(),
             updated_at: new Date(),
             size: BigInt(file.size),
-            structure_name: null,
-            structure_description: null,
+            structure_name:
+              kind === "bank_statement"
+                ? "Bank Statement"
+                : kind === "general_ledger"
+                ? "General Ledger"
+                : null,
+            structure_description:
+              kind === "bank_statement"
+                ? "Bank of America (Business)" // TODO: Make this dynamic
+                : kind === "general_ledger"
+                ? "Accounting CS" // TODO: Make this dynamic
+                : null,
             hash: file_hash,
             owner_id: user.id,
             name: file.name,
@@ -99,7 +109,14 @@ export default function Dropzone({
 
           // Add the new file to the state
           if (setParentFile) setFile(newFile);
-          else if (setParentFiles) setFiles((prev) => [...prev, newFile]);
+          else if (setParentFiles)
+            setFiles(
+              // don't add the file if the hash already exists
+              (prev) =>
+                prev.some((file) => file.hash === newFile.hash)
+                  ? prev
+                  : [...prev, newFile]
+            );
 
           // Check if a file with the same file_hash already exists
           const { data: existingFile, error: existingFileError } =
@@ -183,6 +200,8 @@ export default function Dropzone({
               name: file.name,
               hash: file_hash,
               path: uploadedFile.path,
+              structure_name: newFile.structure_name || undefined,
+              structure_description: newFile.structure_description || undefined,
               category: kind,
             });
             console.log("Uploaded file:", newFile);
@@ -348,11 +367,11 @@ export default function Dropzone({
                 // Remove the file from the state
                 if (setParentFile)
                   setFile((prev) =>
-                    prev?.hash == oldFile.hash ? undefined : prev
+                    prev?.id == oldFile.id ? undefined : prev
                   );
                 else if (setParentFiles)
                   setFiles((prev) =>
-                    prev.filter((file) => file.hash != oldFile.hash)
+                    prev.filter((file) => file.id != oldFile.id)
                   );
                 break;
             }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { type GetServerSidePropsContext, type NextPage } from "next";
 import {
   createServerSupabaseClient,
@@ -5,21 +6,28 @@ import {
 } from "@supabase/auth-helpers-nextjs";
 import UploadGeneralLedger from "~/components/general-ledger";
 import UploadBankStatement from "~/components/bank-statement";
+import type { file_details } from "~/types/file";
 
 type Props = { user: User };
 
-const Home: NextPage<Props> = ({ user }) => {
+const Code: NextPage<Props> = ({ user }) => {
+  const [generalLedger, setGeneralLedger] = useState<file_details>();
+  const [bankStatements, setBankStatements] = useState<file_details[]>([]);
+
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <section className="flex h-full min-w-0 flex-1 flex-col gap-6">
-        <UploadGeneralLedger user={user} />
-        <UploadBankStatement user={user} />
+        <UploadGeneralLedger user={user} setGeneralLedger={setGeneralLedger} />
+        <UploadBankStatement
+          user={user}
+          setBankStatements={setBankStatements}
+        />
       </section>
     </div>
   );
 };
 
-export default Home;
+export default Code;
 
 export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
   // TODO: abstract this (into a hook?, look into this)

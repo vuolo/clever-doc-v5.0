@@ -24,7 +24,7 @@ export const fileRouter = createTRPCRouter({
         hash: z.string(),
         path: z.string(),
         category: z.string().optional(),
-        results: z.unknown().optional(),
+        results: z.any().optional(),
       })
     )
     .mutation(({ ctx, input }) => {
