@@ -108,10 +108,13 @@ export default function Dropzone({ user, setParentFile }: Props) {
               isUploading: false,
               path: existingFile.path,
               resourceUrl: resourceUrl ?? "",
+              beganProcessingAt: new Date(),
             };
 
             // Update the file state
             setFile(newFile);
+
+            // TODO: check if there are file.results, and if not, process the file
 
             // Process the file
             if (!resourceUrl) return;
@@ -119,8 +122,12 @@ export default function Dropzone({ user, setParentFile }: Props) {
             const results = await getResults(resourceUrl);
             console.log("Results:", results);
             setFile((prev) =>
-              prev?.id == newFile.id ? { ...prev, results } : prev
+              prev?.id == newFile.id
+                ? { ...prev, results, beganProcessingAt: undefined }
+                : prev
             );
+
+            // TODO: store results in database
           } else {
             // Store the file in a bucket using supabase storage
             const fileName = getUniqueFileName(file.name, file_id);
@@ -203,8 +210,12 @@ export default function Dropzone({ user, setParentFile }: Props) {
 
                 // Update the file in the state
                 setFile((prev) =>
-                  prev?.id == newFile.id ? { ...prev, ...newFile } : prev
+                  prev?.id == newFile.id
+                    ? { ...prev, ...newFile, beganProcessingAt: new Date() }
+                    : prev
                 );
+
+                // TODO: check if there are file.results, and if not, process the file
 
                 // Process the file
                 if (!resourceUrl) return;
@@ -212,8 +223,12 @@ export default function Dropzone({ user, setParentFile }: Props) {
                 const results = await getResults(resourceUrl);
                 console.log("Results:", results);
                 setFile((prev) =>
-                  prev?.id == newFile.id ? { ...prev, results } : prev
+                  prev?.id == newFile.id
+                    ? { ...prev, results, beganProcessingAt: undefined }
+                    : prev
                 );
+
+                // TODO: store results in database
                 break;
               case "UPDATE":
                 // Add the UI extension fields to the file

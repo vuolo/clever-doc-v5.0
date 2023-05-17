@@ -7,4 +7,5 @@ export type file_details = file_details & {
   hasError: boolean;
   resourceUrl?: string;
   results?: unknown; // TODO: define this type
+  beganProcessingAt?: Date;
 };
