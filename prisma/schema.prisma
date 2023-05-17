@@ -251,6 +251,7 @@ model file_details {
   name                  String
   path                  String
   category              String       @default("unassigned")
+  results               Json?        @db.Json
   user_details          user_details @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")

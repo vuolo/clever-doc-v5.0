@@ -4,6 +4,7 @@ import FileSaver from "file-saver";
 import { differenceInSeconds, differenceInMinutes } from "date-fns";
 import {
   Braces,
+  CornerDownRight,
   Download,
   Eye,
   FileCheck2,
@@ -22,10 +23,11 @@ type Dispatch<A> = (value: A) => void;
 
 type Props = {
   file?: file_details;
-  setParentFile: Dispatch<SetStateAction<file_details>>;
+  setParentFile: Dispatch<SetStateAction<file_details | undefined>>;
 };
 
 export default function FileDisplay({ file, setParentFile }: Props) {
+  const updateFileDetails = api.file.updateFileDetails.useMutation();
   const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
     onError: (error) => {
       console.error("Error:", error);
@@ -95,7 +97,7 @@ export default function FileDisplay({ file, setParentFile }: Props) {
       leaveFrom="opacity-100 translate-x-0"
       leaveTo="opacity-0 -translate-x-10"
     >
-      <div className="my-8 rounded-lg border bg-white p-6">
+      <div className="my-4 rounded-lg border bg-white px-6 py-4">
         <div className="flex justify-between">
           <div className="flex">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-500">
@@ -105,11 +107,7 @@ export default function FileDisplay({ file, setParentFile }: Props) {
               <h2 className="text-lg font-medium leading-6 text-gray-900">
                 {file?.name}
               </h2>
-              <p className="text-sm text-gray-500">{file?.structure_name}</p>
-              <p className="text-sm text-gray-700">
-                {file?.structure_description}
-              </p>
-              <p className="text-sm text-gray-700">
+              <p className="text-xs text-gray-500">
                 {getFormattedFileSize(Number(file?.size))}
               </p>
             </div>
@@ -130,7 +128,7 @@ export default function FileDisplay({ file, setParentFile }: Props) {
                       ...prev,
                       results: undefined,
                       beganProcessingAt: new Date(),
-                    };
+                    } as file_details;
                   });
 
                   // Process the file
@@ -139,10 +137,18 @@ export default function FileDisplay({ file, setParentFile }: Props) {
                   const results = await getResults(file.resourceUrl);
                   console.log("Results:", results);
                   setParentFile((prev) => {
-                    return { ...prev, results, beganProcessingAt: undefined };
+                    return {
+                      ...prev,
+                      results,
+                      beganProcessingAt: undefined,
+                    } as file_details;
                   });
 
-                  // TODO: store results in database
+                  // Store results in database
+                  await updateFileDetails.mutateAsync({
+                    hash: file.hash,
+                    results,
+                  });
                 })();
               }}
             >
@@ -189,7 +195,7 @@ export default function FileDisplay({ file, setParentFile }: Props) {
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                   >
-                    <Dialog.Overlay className="fixed inset-0" />
+                    <Dialog.Overlay className="fixed inset-0 bg-black opacity-50" />
                   </Transition.Child>
 
                   {/* This element is to trick the browser into centering the modal contents. */}
@@ -279,9 +285,22 @@ export default function FileDisplay({ file, setParentFile }: Props) {
           </div>
         </div>
 
+        <p className="mt-3 text-sm text-gray-700">
+          {file?.structure_name ||
+            file?.category
+              .replace("general_ledger", "General Ledger")
+              .replace("bank_statement", "Bank Statement")}
+        </p>
+        {file?.structure_description && (
+          <p className="ml-1 flex items-center gap-1 text-xs text-gray-500">
+            <CornerDownRight size={12} />
+            {file?.structure_description}
+          </p>
+        )}
+
         {/* Progress bar */}
         {!file?.results && file?.beganProcessingAt && (
-          <div className="mt-4">
+          <div className="mt-2">
             <p className="text-sm">Processing...</p>
             <p className="text-xs text-gray-500">Started {timeAgo}</p>
             <ProgressBar progress={progress} />

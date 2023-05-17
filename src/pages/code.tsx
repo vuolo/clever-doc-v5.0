@@ -4,6 +4,7 @@ import {
   type User,
 } from "@supabase/auth-helpers-nextjs";
 import UploadGeneralLedger from "~/components/general-ledger";
+import UploadBankStatement from "~/components/bank-statement";
 
 type Props = { user: User };
 
@@ -12,6 +13,7 @@ const Home: NextPage<Props> = ({ user }) => {
     <div className="flex-1 overflow-y-auto p-6">
       <section className="flex h-full min-w-0 flex-1 flex-col gap-6">
         <UploadGeneralLedger user={user} />
+        <UploadBankStatement user={user} />
       </section>
     </div>
   );

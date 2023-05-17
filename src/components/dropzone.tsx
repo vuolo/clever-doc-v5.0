@@ -21,18 +21,31 @@ import { api } from "~/utils/api";
 import type { file_details } from "~/types/file";
 import type { Account } from "~/types/account";
 
-type Props = { user: User; setParentFile: (file?: file_details) => void };
+type Props = {
+  kind: "general_ledger" | "bank_statement";
+  user: User;
+  setParentFile?: (file?: file_details) => void;
+  setParentFiles?: (files: file_details[]) => void;
+};
 
-export default function Dropzone({ user, setParentFile }: Props) {
+export default function Dropzone({
+  kind,
+  user,
+  setParentFile,
+  setParentFiles,
+}: Props) {
   const { supabaseClient: supabase } = useSessionContext();
   const addFileDetails = api.file.addFileDetails.useMutation();
+  const updateFileDetails = api.file.updateFileDetails.useMutation();
 
   const [file, setFile] = useState<file_details>();
+  const [files, setFiles] = useState<file_details[]>([]);
 
-  // Listen for changes to the file object and sync with the parent component
+  // Listen for changes to the file/files object and sync with the parent component
   useEffect(() => {
-    setParentFile(file);
-  }, [file, setParentFile, supabase]);
+    if (setParentFile) setParentFile(file);
+    else if (setParentFiles) setParentFiles(files);
+  }, [file, setParentFile, files, setParentFiles, supabase]);
 
   const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
     onError: (error) => {
@@ -44,10 +57,10 @@ export default function Dropzone({ user, setParentFile }: Props) {
     async (resourceUrl: string) => {
       return (await uploadToFormRecognizer.mutateAsync({
         fileUrl: resourceUrl,
-        kind: "general_ledger",
+        kind,
       })) as Account[];
     },
-    [uploadToFormRecognizer]
+    [uploadToFormRecognizer, kind]
   );
 
   // Uploads files to supabase and creates the `file_details` record
@@ -76,7 +89,7 @@ export default function Dropzone({ user, setParentFile }: Props) {
             owner_id: user.id,
             name: file.name,
             path: "",
-            category: "general-ledger",
+            category: kind,
             // UI:
             isUploading: true,
             hasError: false,
@@ -85,7 +98,8 @@ export default function Dropzone({ user, setParentFile }: Props) {
           } as file_details;
 
           // Add the new file to the state
-          setFile(newFile);
+          if (setParentFile) setFile(newFile);
+          else if (setParentFiles) setFiles((prev) => [...prev, newFile]);
 
           // Check if a file with the same file_hash already exists
           const { data: existingFile, error: existingFileError } =
@@ -112,22 +126,40 @@ export default function Dropzone({ user, setParentFile }: Props) {
             };
 
             // Update the file state
-            setFile(newFile);
+            if (setParentFile) setFile(newFile);
+            else if (setParentFiles)
+              setFiles((prev) =>
+                prev.map((file) => (file.hash == newFile.hash ? newFile : file))
+              );
 
-            // TODO: check if there are file.results, and if not, process the file
+            // Check if there are file.results, and if not, process the file
+            if (!existingFile.results) {
+              // Process the file
+              if (!resourceUrl) return;
+              console.log("Processing file:", resourceUrl);
+              const results = await getResults(resourceUrl);
+              console.log("Results:", results);
+              if (setParentFile)
+                setFile((prev) =>
+                  prev?.id == newFile.id
+                    ? { ...prev, results, beganProcessingAt: undefined }
+                    : prev
+                );
+              else if (setParentFiles)
+                setFiles((prev) =>
+                  prev.map((file) =>
+                    file.hash == newFile.hash
+                      ? { ...file, results, beganProcessingAt: undefined }
+                      : file
+                  )
+                );
 
-            // Process the file
-            if (!resourceUrl) return;
-            console.log("Processing file:", resourceUrl);
-            const results = await getResults(resourceUrl);
-            console.log("Results:", results);
-            setFile((prev) =>
-              prev?.id == newFile.id
-                ? { ...prev, results, beganProcessingAt: undefined }
-                : prev
-            );
-
-            // TODO: store results in database
+              // Store results in database
+              await updateFileDetails.mutateAsync({
+                hash: existingFile.hash,
+                results,
+              });
+            }
           } else {
             // Store the file in a bucket using supabase storage
             const fileName = getUniqueFileName(file.name, file_id);
@@ -151,7 +183,7 @@ export default function Dropzone({ user, setParentFile }: Props) {
               name: file.name,
               hash: file_hash,
               path: uploadedFile.path,
-              category: "general-ledger",
+              category: kind,
             });
             console.log("Uploaded file:", newFile);
 
@@ -163,13 +195,71 @@ export default function Dropzone({ user, setParentFile }: Props) {
             };
 
             // Update the file state
-            setFile(newFile);
+            if (setParentFile) setFile(newFile);
+            else if (setParentFiles)
+              setFiles((prev) =>
+                prev.map((file) => (file.hash == newFile.hash ? newFile : file))
+              );
+
+            // Generate URL for the file
+            console.log("Generating signed URL for file:", newFile);
+            const signedUrls = await getSignedUrls([newFile], supabase);
+            const resourceUrl = signedUrls?.[0]?.signedUrl;
+            console.log("Signed URL:", resourceUrl);
+
+            // Add the signed URL to the file
+            newFile.resourceUrl = resourceUrl ?? "";
+
+            // Update the file in the state
+            if (setParentFile)
+              setFile((prev) =>
+                prev?.id == newFile.id
+                  ? { ...prev, ...newFile, beganProcessingAt: new Date() }
+                  : prev
+              );
+            else if (setParentFiles)
+              setFiles((prev) =>
+                prev.map((file) =>
+                  file.id == newFile.id
+                    ? { ...file, ...newFile, beganProcessingAt: new Date() }
+                    : file
+                )
+              );
+
+            // Check if there are file.results, and if not, process the file
+            if (newFile.results) return;
+
+            // Process the file
+            if (!resourceUrl) return;
+            console.log("Processing file:", resourceUrl);
+            const results = await getResults(resourceUrl);
+            console.log("Results:", results);
+            setFile((prev) =>
+              prev?.id == newFile.id
+                ? { ...prev, results, beganProcessingAt: undefined }
+                : prev
+            );
+
+            // Store results in database
+            await updateFileDetails.mutateAsync({
+              hash: newFile.hash,
+              results,
+            });
           }
         };
         reader.readAsText(file);
       });
     },
-    [addFileDetails, supabase, user.id, getResults]
+    [
+      addFileDetails,
+      updateFileDetails,
+      supabase,
+      user.id,
+      getResults,
+      kind,
+      setParentFile,
+      setParentFiles,
+    ]
   );
 
   // Listen for changes to the `file_details` table
@@ -184,52 +274,57 @@ export default function Dropzone({ user, setParentFile }: Props) {
           table: "file_details",
         },
         (payload) => {
-          // void (() => {
-          void (async () => {
+          void (() => {
+            // void (async () => {
             console.log("file_details payload", payload);
             const oldFile = payload.old as file_details;
             const newFile = payload.new as file_details;
 
             switch (payload.eventType) {
-              case "INSERT":
-                // Add the UI extension fields to the file
-                newFile.isUploading = false;
-                newFile.hasError = false;
+              // case "INSERT":
+              //   // Add the UI extension fields to the file
+              //   newFile.isUploading = false;
+              //   newFile.hasError = false;
 
-                // Ensure the file is the one we're tracking
-                if (file?.id != newFile.id) return;
+              //   // Ensure the file is the one we're tracking
+              //   if (file?.id != newFile.id) break;
 
-                // Generate URL for the file
-                console.log("Generating signed URL for file:", newFile);
-                const signedUrls = await getSignedUrls([file], supabase);
-                const resourceUrl = signedUrls?.[0]?.signedUrl;
-                console.log("Signed URL:", resourceUrl);
+              //   // Generate URL for the file
+              //   console.log("Generating signed URL for file:", newFile);
+              //   const signedUrls = await getSignedUrls([file], supabase);
+              //   const resourceUrl = signedUrls?.[0]?.signedUrl;
+              //   console.log("Signed URL:", resourceUrl);
 
-                // Add the signed URL to the file
-                newFile.resourceUrl = resourceUrl ?? "";
+              //   // Add the signed URL to the file
+              //   newFile.resourceUrl = resourceUrl ?? "";
 
-                // Update the file in the state
-                setFile((prev) =>
-                  prev?.id == newFile.id
-                    ? { ...prev, ...newFile, beganProcessingAt: new Date() }
-                    : prev
-                );
+              //   // Update the file in the state
+              //   setFile((prev) =>
+              //     prev?.id == newFile.id
+              //       ? { ...prev, ...newFile, beganProcessingAt: new Date() }
+              //       : prev
+              //   );
 
-                // TODO: check if there are file.results, and if not, process the file
+              //   // Check if there are file.results, and if not, process the file
+              //   if (newFile.results) break;
 
-                // Process the file
-                if (!resourceUrl) return;
-                console.log("Processing file:", resourceUrl);
-                const results = await getResults(resourceUrl);
-                console.log("Results:", results);
-                setFile((prev) =>
-                  prev?.id == newFile.id
-                    ? { ...prev, results, beganProcessingAt: undefined }
-                    : prev
-                );
+              //   // Process the file
+              //   if (!resourceUrl) break;
+              //   console.log("Processing file:", resourceUrl);
+              //   const results = await getResults(resourceUrl);
+              //   console.log("Results:", results);
+              //   setFile((prev) =>
+              //     prev?.id == newFile.id
+              //       ? { ...prev, results, beganProcessingAt: undefined }
+              //       : prev
+              //   );
 
-                // TODO: store results in database
-                break;
+              //   // Store results in database
+              //   await updateFileDetails.mutateAsync({
+              //     hash: newFile.hash,
+              //     results,
+              //   });
+              //   break;
               case "UPDATE":
                 // Add the UI extension fields to the file
                 newFile.isUploading =
@@ -237,14 +332,28 @@ export default function Dropzone({ user, setParentFile }: Props) {
                 newFile.hasError = file?.id == newFile.id && file?.hasError;
 
                 // Update the file in the state
-                setFile((prev) =>
-                  prev?.id == newFile.id ? { ...prev, ...newFile } : prev
-                );
+                if (setParentFile)
+                  setFile((prev) =>
+                    prev?.id == newFile.id ? { ...prev, ...newFile } : prev
+                  );
+                else if (setParentFiles)
+                  setFiles((prev) =>
+                    prev.map((file) =>
+                      file.hash == newFile.hash ? { ...file, ...newFile } : file
+                    )
+                  );
 
                 break;
               case "DELETE":
                 // Remove the file from the state
-                setFile((prev) => (prev?.id == oldFile.id ? undefined : prev));
+                if (setParentFile)
+                  setFile((prev) =>
+                    prev?.hash == oldFile.hash ? undefined : prev
+                  );
+                else if (setParentFiles)
+                  setFiles((prev) =>
+                    prev.filter((file) => file.hash != oldFile.hash)
+                  );
                 break;
             }
           })();
@@ -253,7 +362,14 @@ export default function Dropzone({ user, setParentFile }: Props) {
       .subscribe((message) => {
         console.log("Supabase Realtime Status:", message);
       });
-  }, [supabase, file, getResults]);
+  }, [
+    supabase,
+    file,
+    getResults,
+    setParentFile,
+    setParentFiles,
+    // updateFileDetails
+  ]);
 
   // Functionality for managing the file upload
   const onDrop = useCallback(
@@ -306,7 +422,7 @@ export default function Dropzone({ user, setParentFile }: Props) {
     isFocused,
     isDragAccept,
     isDragReject,
-    open,
+    // open,
   } = useDropzone({
     accept: {
       "application/pdf": [".pdf"],
@@ -316,7 +432,7 @@ export default function Dropzone({ user, setParentFile }: Props) {
       "application/vnd.ms-excel": [".xls"],
       "text/csv": [".csv"],
     },
-    multiple: false,
+    multiple: kind === "bank_statement",
     minSize: 0,
     maxSize: 10485760, // 10 MB
     maxFiles: 20,
@@ -354,7 +470,9 @@ export default function Dropzone({ user, setParentFile }: Props) {
                     htmlFor="file-upload"
                     className="relative cursor-pointer rounded-md bg-transparent font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
                   >
-                    <span>Upload a file</span>
+                    <span>
+                      Upload {kind === "general_ledger" ? "a file" : "file(s)"}
+                    </span>
                     <input
                       id="file-upload"
                       name="file-upload"

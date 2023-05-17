@@ -276,7 +276,7 @@ export function parseBankStatementFormRecognizerResult(
     case "bofa_business":
       return parseBankStatementFormRecognizerResult_BofaBusiness(result);
     default:
-      throw new Error(`Unknown bank name: ${bank_name}`);
+      throw new Error(`Unknown bank name: ${bank_name as string}`);
   }
 }
 

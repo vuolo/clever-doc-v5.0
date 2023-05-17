@@ -24,11 +24,32 @@ export const fileRouter = createTRPCRouter({
         hash: z.string(),
         path: z.string(),
         category: z.string().optional(),
+        results: z.unknown().optional(),
       })
     )
     .mutation(({ ctx, input }) => {
       return ctx.prisma.file_details.create({
-        data: { ...input, owner_id: ctx.session.user.id },
+        data: { ...input, structure_name: input.category === "general_ledger" ? "General Ledger" : input.category === "bank_statement" ? "Bank Statement" : undefined, owner_id: ctx.session.user.id },
+      });
+    }),
+    updateFileDetails: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().optional(),
+        size: z.bigint().optional(),
+        client_id: z.string().optional(),
+        structure_name: z.string().optional(),
+        structure_description: z.string().optional(),
+        hash: z.string(),
+        path: z.string().optional(),
+        category: z.string().optional(),
+        results: z.any().optional(),
+      })
+    )
+    .mutation(({ ctx, input }) => {
+      return ctx.prisma.file_details.updateMany({
+        where: { hash: input.hash },
+        data: { ...input, structure_name: input.category === "general_ledger" ? "General Ledger" : input.category === "bank_statement" ? "Bank Statement" : undefined },
       });
     }),
     uploadToFormRecognizer: protectedProcedure
