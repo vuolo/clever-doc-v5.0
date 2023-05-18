@@ -167,13 +167,13 @@ export default function FileDisplay({
       leaveFrom="opacity-100 translate-x-0"
       leaveTo="opacity-0 -translate-x-10"
     >
-      <div className="my-4 rounded-lg border bg-white px-6 py-4">
-        <div className="flex justify-between">
+      <div className="mx-4 my-4 rounded-lg border bg-white px-6 py-4 md:mx-auto md:w-[90%]">
+        <div className="flex flex-col items-center gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-500">
               <FileCheck2 size="24" />
             </div>
-            <div className="ml-4">
+            <div className="ml-4 flex flex-col justify-center">
               <h2 className="text-lg font-medium leading-6 text-gray-900">
                 {file?.name}
               </h2>
@@ -273,7 +273,7 @@ export default function FileDisplay({
                       <div className="mt-4">
                         <button
                           type="button"
-                          className="inline-flex justify-center rounded-md border border-transparent bg-stone-100 px-4 py-2 text-sm font-medium text-stone-900 hover:bg-stone-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 focus-visible:ring-offset-2"
+                          className="inline-flex justify-center rounded-md border border-transparent bg-stone-500 px-4 py-2 text-sm font-medium text-white hover:bg-stone-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 focus-visible:ring-offset-2"
                           onClick={closeModal}
                         >
                           Close
@@ -327,18 +327,22 @@ export default function FileDisplay({
           </div>
         </div>
 
-        <p className="mt-3 text-sm text-gray-700">
-          {file?.structure_name ||
-            (file?.category || "")
-              .replace("general_ledger", "General Ledger")
-              .replace("bank_statement", "Bank Statement")}
-        </p>
-        {file?.structure_description && (
-          <p className="ml-1 flex items-center gap-1 text-xs text-gray-500">
-            <CornerDownRight size={12} />
-            {file?.structure_description}
-          </p>
-        )}
+        {/* <div className="flex justify-center md:justify-start">
+          <div>
+            <p className="mt-3 text-sm text-gray-700">
+              {file?.structure_name ||
+                (file?.category || "")
+                  .replace("general_ledger", "General Ledger")
+                  .replace("bank_statement", "Bank Statement")}
+            </p>
+            {file?.structure_description && (
+              <p className="ml-1 flex items-center gap-1 text-xs text-gray-500">
+                <CornerDownRight size={12} />
+                {file?.structure_description}
+              </p>
+            )}
+          </div>
+        </div> */}
 
         {/* Progress bar */}
         {!file?.results && file?.beganProcessingAt && (

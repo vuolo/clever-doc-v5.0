@@ -1,6 +1,18 @@
+import { useState } from "react";
 import Link from "next/link";
 
 export default function BankStatementHeader() {
+  const [selectedBank, setSelectedBank] = useState<string | null>(
+    "Bank of America (Business)"
+  );
+
+  const bankOptions = [
+    "Bank of America (Business)",
+    "Regions (Business)",
+    "Wells Fargo (Business)",
+    // add more bank types here as necessary
+  ];
+
   return (
     <>
       {/* Title */}
@@ -74,6 +86,28 @@ export default function BankStatementHeader() {
           </li>
         </ul>
       </ul>
+
+      <p className="ml-8 mt-4 text-sm font-medium text-gray-700">
+        Select the bank that you are uploading statement(s) for:
+      </p>
+
+      {/* Bank options */}
+      <div className="mt-2 flex h-fit gap-2 md:ml-8">
+        {bankOptions.map((bank) => (
+          <button
+            key={bank}
+            type="button"
+            onClick={() => setSelectedBank(bank)}
+            className={`inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 focus-visible:ring-offset-2 ${
+              selectedBank === bank
+                ? "bg-stone-500 text-white"
+                : "border border-stone-500 text-stone-500"
+            }`}
+          >
+            {bank}
+          </button>
+        ))}
+      </div>
     </>
   );
 }

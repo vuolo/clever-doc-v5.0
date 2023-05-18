@@ -1,6 +1,17 @@
+import { useState } from "react";
 import Link from "next/link";
 
 export default function GeneralLedgerHeader() {
+  const [selectedAccountingSoftware, setSelectedAccountingSoftware] = useState<
+    string | null
+  >("Accounting CS");
+
+  const accountingSoftwareOptions = [
+    "Accounting CS",
+    "QuickBooks",
+    // add more software options here as necessary
+  ];
+
   return (
     <>
       {/* Title */}
@@ -73,6 +84,29 @@ export default function GeneralLedgerHeader() {
           </li>
         </ul>
       </ul>
+
+      <p className="ml-8 mt-4 text-sm font-medium text-gray-700">
+        Select the accounting software that you are uploading general ledger(s)
+        from:
+      </p>
+
+      {/* Accounting Software options */}
+      <div className="mt-2 flex h-fit gap-2 md:ml-8">
+        {accountingSoftwareOptions.map((software) => (
+          <button
+            key={software}
+            type="button"
+            onClick={() => setSelectedAccountingSoftware(software)}
+            className={`inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 focus-visible:ring-offset-2 ${
+              selectedAccountingSoftware === software
+                ? "bg-stone-500 text-white"
+                : "border border-stone-500 text-stone-500"
+            }`}
+          >
+            {software}
+          </button>
+        ))}
+      </div>
     </>
   );
 }
