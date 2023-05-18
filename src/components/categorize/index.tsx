@@ -18,13 +18,13 @@ export default function Categorize({
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    if (!generalLedger) {
+    if (!generalLedger?.name) {
       setMessage("You need to upload a general ledger before you can proceed.");
     } else if (!bankStatements?.length) {
       setMessage(
         "You need to upload at least one bank statement before you can proceed."
       );
-    } else if (!generalLedger.results) {
+    } else if (generalLedger.name && !generalLedger.results) {
       setMessage(
         "Your general ledger is being processed. Please wait a moment..."
       );
