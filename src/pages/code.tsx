@@ -7,6 +7,7 @@ import {
 import UploadGeneralLedger from "~/components/general-ledger";
 import UploadBankStatement from "~/components/bank-statement";
 import type { file_details } from "~/types/file";
+import Categorize from "~/components/categorize";
 
 type Props = { user: User };
 
@@ -21,6 +22,11 @@ const Code: NextPage<Props> = ({ user }) => {
         <UploadBankStatement
           user={user}
           setBankStatements={setBankStatements}
+        />
+        <Categorize
+          user={user}
+          generalLedger={generalLedger}
+          bankStatements={bankStatements}
         />
       </section>
     </div>

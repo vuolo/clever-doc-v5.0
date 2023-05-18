@@ -1,10 +1,13 @@
 import Link from "next/link";
 
-export default function GeneralLedgerHeader() {
+export default function BankStatementHeader() {
   return (
     <>
       {/* Title */}
       <h1 className="text-xl font-semibold text-gray-900">
+        <span className="mr-1 rounded-md bg-gray-200 px-1.5 py-0.5 text-lg">
+          2.
+        </span>{" "}
         Upload a Bank Statement
       </h1>
 

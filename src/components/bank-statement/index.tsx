@@ -29,18 +29,7 @@ export default function UploadBankStatement({
       <Header />
       <Dropzone kind="bank_statement" user={user} setParentFiles={setFiles} />
       {files.map((file) => (
-        <FileDisplay
-          file={file}
-          setParentFile={(newFile) => {
-            setFiles(
-              (prev) =>
-                prev.map((prevFile) =>
-                  prevFile.id === file.id ? newFile : prevFile
-                ) as file_details[]
-            );
-          }}
-          key={file.id}
-        />
+        <FileDisplay file={file} setParentFiles={setFiles} key={file.id} />
       ))}
     </div>
   );

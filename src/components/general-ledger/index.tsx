@@ -25,7 +25,7 @@ export default function UploadGeneralLedger({ user, setGeneralLedger }: Props) {
     <div className="mt-2 w-full rounded-md bg-white p-6 shadow-md">
       <Header />
       <Dropzone kind="general_ledger" user={user} setParentFile={setFile} />
-      {file && <FileDisplay file={file} setParentFile={setFile} />}
+      {file?.id && <FileDisplay file={file} setParentFile={setFile} />}
     </div>
   );
 }

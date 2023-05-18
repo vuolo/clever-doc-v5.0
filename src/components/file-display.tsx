@@ -23,10 +23,15 @@ type Dispatch<A> = (value: A) => void;
 
 type Props = {
   file?: file_details;
-  setParentFile: Dispatch<SetStateAction<file_details | undefined>>;
+  setParentFile?: Dispatch<SetStateAction<file_details | undefined>>;
+  setParentFiles?: Dispatch<SetStateAction<file_details[]>>;
 };
 
-export default function FileDisplay({ file, setParentFile }: Props) {
+export default function FileDisplay({
+  file,
+  setParentFile,
+  setParentFiles,
+}: Props) {
   const updateFileDetails = api.file.updateFileDetails.useMutation();
   const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
     onError: (error) => {
@@ -38,10 +43,10 @@ export default function FileDisplay({ file, setParentFile }: Props) {
     async (resourceUrl: string) => {
       return (await uploadToFormRecognizer.mutateAsync({
         fileUrl: resourceUrl,
-        kind: "general_ledger",
+        kind: (file?.category as "general_ledger" | "bank_statement") || "n/a",
       })) as Account[];
     },
-    [uploadToFormRecognizer]
+    [uploadToFormRecognizer, file?.category]
   );
 
   const [progress, setProgress] = useState(0);
@@ -78,6 +83,71 @@ export default function FileDisplay({ file, setParentFile }: Props) {
 
     return () => clearInterval(timer);
   }, [file?.beganProcessingAt, progress]);
+
+  const reparseFile = useCallback(async () => {
+    // Process the file
+    if (!file?.resourceUrl) return;
+
+    // Reset the file
+    if (setParentFile)
+      setParentFile((prev) => {
+        return {
+          ...prev,
+          results: undefined,
+          beganProcessingAt: new Date(),
+        } as file_details;
+      });
+    else if (setParentFiles)
+      setParentFiles((prev) => {
+        return prev.map((prevFile) => {
+          if (prevFile.id === file.id)
+            return {
+              ...prevFile,
+              results: undefined,
+              beganProcessingAt: new Date(),
+            } as unknown as file_details;
+          else return prevFile;
+        });
+      });
+
+    console.log("Processing file:", file.resourceUrl);
+    const results = await getResults(file.resourceUrl);
+    console.log("Results:", results);
+    if (setParentFile)
+      setParentFile((prev) => {
+        return {
+          ...prev,
+          results,
+          beganProcessingAt: undefined,
+        } as file_details;
+      });
+    else if (setParentFiles)
+      setParentFiles((prev) => {
+        return prev.map((prevFile) => {
+          if (prevFile.id === file.id)
+            return {
+              ...prevFile,
+              results,
+              beganProcessingAt: undefined,
+            } as file_details;
+          else return prevFile;
+        });
+      });
+
+    // Store results in database
+    await updateFileDetails.mutateAsync({
+      hash: file.hash,
+      results,
+    });
+  }, [
+    file?.id,
+    file?.resourceUrl,
+    file?.hash,
+    getResults,
+    setParentFile,
+    setParentFiles,
+    updateFileDetails,
+  ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const closeModal = () => {
@@ -121,35 +191,7 @@ export default function FileDisplay({ file, setParentFile }: Props) {
                 !file?.resourceUrl ? "cursor-not-allowed opacity-50" : ""
               )}
               onClick={() => {
-                void (async () => {
-                  // Reset the file
-                  setParentFile((prev) => {
-                    return {
-                      ...prev,
-                      results: undefined,
-                      beganProcessingAt: new Date(),
-                    } as file_details;
-                  });
-
-                  // Process the file
-                  if (!file?.resourceUrl) return;
-                  console.log("Processing file:", file.resourceUrl);
-                  const results = await getResults(file.resourceUrl);
-                  console.log("Results:", results);
-                  setParentFile((prev) => {
-                    return {
-                      ...prev,
-                      results,
-                      beganProcessingAt: undefined,
-                    } as file_details;
-                  });
-
-                  // Store results in database
-                  await updateFileDetails.mutateAsync({
-                    hash: file.hash,
-                    results,
-                  });
-                })();
+                void reparseFile();
               }}
             >
               {file?.resourceUrl ? (
@@ -287,7 +329,7 @@ export default function FileDisplay({ file, setParentFile }: Props) {
 
         <p className="mt-3 text-sm text-gray-700">
           {file?.structure_name ||
-            file?.category
+            (file?.category || "")
               .replace("general_ledger", "General Ledger")
               .replace("bank_statement", "Bank Statement")}
         </p>

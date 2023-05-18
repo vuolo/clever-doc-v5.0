@@ -5,6 +5,9 @@ export default function GeneralLedgerHeader() {
     <>
       {/* Title */}
       <h1 className="text-xl font-semibold text-gray-900">
+        <span className="mr-1 rounded-md bg-gray-200 px-1.5 py-0.5 text-lg">
+          1.
+        </span>{" "}
         Upload a General Ledger
       </h1>
 

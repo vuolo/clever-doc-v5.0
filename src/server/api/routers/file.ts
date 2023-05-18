@@ -4,6 +4,7 @@ import {
   type AnalyzedDocument,
   AzureKeyCredential,
   DocumentAnalysisClient,
+  type FormRecognizerRequestBody,
 } from "@azure/ai-form-recognizer";
 import {
   parseBankStatementFormRecognizerResult,
@@ -76,10 +77,9 @@ export const fileRouter = createTRPCRouter({
       );
 
       // begin the analysis process
-      // TODO: figure out how to override the "no overload matches this call" error
       const poller = await client.beginAnalyzeDocument(
         "prebuilt-document",
-        input.fileUrl as unknown
+        input.fileUrl as unknown as FormRecognizerRequestBody
       );
 
       const result = await poller.pollUntilDone();
