@@ -187,7 +187,7 @@ export default function FileDisplay({
               data-tooltip-id="reparse-tooltip"
               data-tooltip-content="Reparse File"
               className={classNames(
-                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white",
+                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white hover:bg-stone-400",
                 !file?.resourceUrl ? "cursor-not-allowed opacity-50" : ""
               )}
               onClick={() => {
@@ -207,7 +207,7 @@ export default function FileDisplay({
               data-tooltip-id="results-tooltip"
               data-tooltip-content="View Results"
               className={classNames(
-                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white",
+                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white hover:bg-stone-400",
                 !file?.results ? "cursor-not-allowed opacity-50" : ""
               )}
               onClick={openModal}
@@ -273,7 +273,7 @@ export default function FileDisplay({
                       <div className="mt-4">
                         <button
                           type="button"
-                          className="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                          className="inline-flex justify-center rounded-md border border-transparent bg-stone-100 px-4 py-2 text-sm font-medium text-stone-900 hover:bg-stone-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 focus-visible:ring-offset-2"
                           onClick={closeModal}
                         >
                           Close
@@ -295,7 +295,7 @@ export default function FileDisplay({
               data-tooltip-id="view-tooltip"
               data-tooltip-content="View File"
               className={classNames(
-                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white",
+                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white hover:bg-stone-400",
                 !file?.resourceUrl ? "cursor-not-allowed opacity-50" : ""
               )}
             >
@@ -310,7 +310,7 @@ export default function FileDisplay({
               data-tooltip-id="download-tooltip"
               data-tooltip-content="Download File"
               className={classNames(
-                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white",
+                "flex h-10 w-10 items-center justify-center rounded-full bg-stone-500 text-white hover:bg-stone-400",
                 !file?.resourceUrl ? "cursor-not-allowed opacity-50" : ""
               )}
               onClick={() => {
