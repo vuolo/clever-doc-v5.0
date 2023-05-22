@@ -20,9 +20,11 @@ import { getFileByHash, getSignedUrls, uploadFile } from "~/utils/file";
 import { api } from "~/utils/api";
 import type { file_details } from "~/types/file";
 import type { Account } from "~/types/account";
+import type { Parser } from "~/types/misc";
 
 type Props = {
   kind: "general_ledger" | "bank_statement";
+  parser: Parser;
   user: User;
   setParentFile?: (file?: file_details) => void;
   setParentFiles?: (files: file_details[]) => void;
@@ -30,6 +32,7 @@ type Props = {
 
 export default function Dropzone({
   kind,
+  parser,
   user,
   setParentFile,
   setParentFiles,
@@ -49,6 +52,12 @@ export default function Dropzone({
 
   const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
     onError: (error) => {
+      toast.error(
+        toastMessage(
+          "There was an error processing your file.",
+          error.message ?? "Unknown error"
+        )
+      );
       console.error("Error:", error);
     },
   });
@@ -58,9 +67,10 @@ export default function Dropzone({
       return (await uploadToFormRecognizer.mutateAsync({
         fileUrl: resourceUrl,
         kind,
+        parser,
       })) as Account[];
     },
-    [uploadToFormRecognizer, kind]
+    [uploadToFormRecognizer, kind, parser]
   );
 
   // Uploads files to supabase and creates the `file_details` record
@@ -76,6 +86,7 @@ export default function Dropzone({
           const file_contents = e.target?.result as string;
           const file_hash = uuidFromString(file_contents, uuidFromString.URL);
           const file_id = uuid();
+          const structure_description = parser;
 
           // Create a sample file object before uploading, then update them once we get the file details back from the server
           let newFile = {
@@ -89,12 +100,7 @@ export default function Dropzone({
                 : kind === "general_ledger"
                 ? "General Ledger"
                 : null,
-            structure_description:
-              kind === "bank_statement"
-                ? "Bank of America (Business)" // TODO: Make this dynamic
-                : kind === "general_ledger"
-                ? "Accounting CS" // TODO: Make this dynamic
-                : null,
+            structure_description,
             hash: file_hash,
             owner_id: user.id,
             name: file.name,
@@ -162,14 +168,24 @@ export default function Dropzone({
               if (setParentFile)
                 setFile((prev) =>
                   prev?.id == newFile.id
-                    ? { ...prev, results, beganProcessingAt: undefined }
+                    ? {
+                        ...prev,
+                        structure_description,
+                        results,
+                        beganProcessingAt: undefined,
+                      }
                     : ({ ...prev } as file_details)
                 );
               else if (setParentFiles)
                 setFiles((prev) =>
                   prev.map((file) =>
                     file.id == newFile.id
-                      ? { ...file, results, beganProcessingAt: undefined }
+                      ? {
+                          ...file,
+                          structure_description,
+                          results,
+                          beganProcessingAt: undefined,
+                        }
                       : ({ ...file } as file_details)
                   )
                 );
@@ -177,6 +193,7 @@ export default function Dropzone({
               // Store results in database
               await updateFileDetails.mutateAsync({
                 hash: existingFile.hash,
+                structure_description,
                 results,
               });
             }
@@ -265,14 +282,24 @@ export default function Dropzone({
             if (setParentFile)
               setFile((prev) =>
                 prev?.id == newFile.id
-                  ? { ...prev, results, beganProcessingAt: undefined }
+                  ? {
+                      ...prev,
+                      structure_description,
+                      results,
+                      beganProcessingAt: undefined,
+                    }
                   : ({ ...prev } as file_details)
               );
             else if (setParentFiles)
               setFiles((prev) =>
                 prev.map((file) =>
                   file.id == newFile.id
-                    ? { ...file, results, beganProcessingAt: undefined }
+                    ? {
+                        ...file,
+                        structure_description,
+                        results,
+                        beganProcessingAt: undefined,
+                      }
                     : ({ ...file } as file_details)
                 )
               );
@@ -280,6 +307,7 @@ export default function Dropzone({
             // Store results in database
             await updateFileDetails.mutateAsync({
               hash: newFile.hash,
+              structure_description,
               results,
             });
           }
@@ -296,6 +324,7 @@ export default function Dropzone({
       kind,
       setParentFile,
       setParentFiles,
+      parser,
     ]
   );
 
@@ -359,6 +388,7 @@ export default function Dropzone({
               //   // Store results in database
               //   await updateFileDetails.mutateAsync({
               //     hash: newFile.hash,
+              //     structure_description: parser,
               //     results,
               //   });
               //   break;

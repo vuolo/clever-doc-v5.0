@@ -1,10 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { Parser } from "~/types/misc";
 
-export default function BankStatementHeader() {
-  const [selectedBank, setSelectedBank] = useState<string | null>(
+type Props = {
+  setParser: (parser: Parser) => void;
+};
+
+export default function BankStatementHeader({ setParser }: Props) {
+  const [selectedBank, setSelectedBank] = useState<string>(
     "Bank of America (Business)"
   );
+
+  // Sync the parser with the parent component
+  useEffect(() => {
+    setParser(
+      selectedBank === "Bank of America (Business)"
+        ? "bofa_business"
+        : selectedBank === "Regions (Business)"
+        ? "regions_business"
+        : selectedBank === "Wells Fargo (Business)"
+        ? "wells_fargo_business"
+        : "n/a"
+    );
+  }, [selectedBank, setParser]);
 
   const bankOptions = [
     "Bank of America (Business)",

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
+import { toast } from "react-toastify";
 import FileSaver from "file-saver";
 import { differenceInSeconds, differenceInMinutes } from "date-fns";
 import {
@@ -10,24 +11,32 @@ import {
   FileCheck2,
   Loader2,
   Repeat,
+  X,
 } from "lucide-react";
 import { Dialog, Transition } from "@headlessui/react";
 import { ProgressBar } from "./progress-bar";
-import { classNames, getFormattedFileSize } from "~/utils/helpers";
+import {
+  classNames,
+  getFormattedFileSize,
+  toastMessage,
+} from "~/utils/helpers";
 import { api } from "~/utils/api";
 import type { file_details } from "~/types/file";
 import type { Account } from "~/types/account";
+import type { Parser } from "~/types/misc";
 
 type SetStateAction<T> = T | ((prevState: T) => T);
 type Dispatch<A> = (value: A) => void;
 
 type Props = {
+  parser: Parser;
   file?: file_details;
   setParentFile?: Dispatch<SetStateAction<file_details | undefined>>;
   setParentFiles?: Dispatch<SetStateAction<file_details[]>>;
 };
 
 export default function FileDisplay({
+  parser,
   file,
   setParentFile,
   setParentFiles,
@@ -35,6 +44,12 @@ export default function FileDisplay({
   const updateFileDetails = api.file.updateFileDetails.useMutation();
   const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
     onError: (error) => {
+      toast.error(
+        toastMessage(
+          "There was an error processing your file.",
+          error.message ?? "Unknown error"
+        )
+      );
       console.error("Error:", error);
     },
   });
@@ -44,9 +59,10 @@ export default function FileDisplay({
       return (await uploadToFormRecognizer.mutateAsync({
         fileUrl: resourceUrl,
         kind: (file?.category as "general_ledger" | "bank_statement") || "n/a",
+        parser,
       })) as Account[];
     },
-    [uploadToFormRecognizer, file?.category]
+    [uploadToFormRecognizer, file?.category, parser]
   );
 
   const [progress, setProgress] = useState(0);
@@ -111,12 +127,14 @@ export default function FileDisplay({
       });
 
     console.log("Processing file:", file.resourceUrl);
+    const structure_description = parser;
     const results = await getResults(file.resourceUrl);
     console.log("Results:", results);
     if (setParentFile)
       setParentFile((prev) => {
         return {
           ...prev,
+          structure_description,
           results,
           beganProcessingAt: undefined,
         } as file_details;
@@ -127,6 +145,7 @@ export default function FileDisplay({
           if (prevFile.id === file.id)
             return {
               ...prevFile,
+              structure_description,
               results,
               beganProcessingAt: undefined,
             } as file_details;
@@ -137,6 +156,7 @@ export default function FileDisplay({
     // Store results in database
     await updateFileDetails.mutateAsync({
       hash: file.hash,
+      structure_description,
       results,
     });
   }, [
@@ -147,6 +167,7 @@ export default function FileDisplay({
     setParentFile,
     setParentFiles,
     updateFileDetails,
+    parser,
   ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -182,7 +203,7 @@ export default function FileDisplay({
               </p>
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center gap-2">
             <button
               data-tooltip-id="reparse-tooltip"
               data-tooltip-content="Reparse File"
@@ -286,8 +307,9 @@ export default function FileDisplay({
             </Transition>
 
             {/* Vertical Divider */}
-            <div className="mx-2 h-10 w-px bg-gray-200" />
+            <div className="mx-1 h-10 w-px bg-gray-200" />
 
+            {/* View button */}
             <a
               href={file?.resourceUrl}
               target="_blank"
@@ -306,6 +328,8 @@ export default function FileDisplay({
               )}
               <Tooltip id="view-tooltip" place="bottom" />
             </a>
+
+            {/* Download button */}
             <button
               data-tooltip-id="download-tooltip"
               data-tooltip-content="Download File"
@@ -323,6 +347,27 @@ export default function FileDisplay({
                 <Loader2 size="16" className="animate-spin" />
               )}
               <Tooltip id="download-tooltip" place="bottom" />
+            </button>
+
+            {/* Remove Fle button */}
+            <button
+              data-tooltip-id="remove-tooltip"
+              data-tooltip-content="Remove File"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-stone-500 hover:text-stone-400"
+              onClick={() => {
+                if (setParentFile)
+                  setParentFile((prev) => {
+                    if (prev?.id === file?.id) return undefined;
+                    return prev;
+                  });
+                else if (setParentFiles)
+                  setParentFiles((prev) =>
+                    prev.filter((f) => f.id !== file?.id)
+                  );
+              }}
+            >
+              <X size="16" />
+              <Tooltip id="remove-tooltip" place="bottom" />
             </button>
           </div>
         </div>

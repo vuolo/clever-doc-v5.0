@@ -1,7 +1,5 @@
 import { z } from "zod";
 import {
-  type AnalyzeResult,
-  type AnalyzedDocument,
   AzureKeyCredential,
   DocumentAnalysisClient,
   type FormRecognizerRequestBody,
@@ -11,6 +9,7 @@ import {
   parseGeneralLedgerFormRecognizerResult,
 } from "~/utils/parser";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import type { Parser } from "~/types/misc";
 
 export const fileRouter = createTRPCRouter({
   addFileDetails: protectedProcedure
@@ -58,10 +57,24 @@ export const fileRouter = createTRPCRouter({
       z.object({
         fileUrl: z.string(),
         kind: z.enum(["general_ledger", "bank_statement", "n/a"]),
-        dataset: z.string().optional(),
+        parser: z.string()
       })
     )
     .mutation(async ({ input }) => {
+      if (input.kind === "n/a") {
+        console.error("File kind is 'n/a'.");
+        return;
+      }
+      if (input.parser === "n/a") {
+        console.error("Parser is 'n/a'.");
+        return;
+      }
+
+      console.log("Uploading to Form Recognizer...");
+      console.log("File URL:", input.fileUrl);
+      console.log("File kind:", input.kind);
+      console.log("Parser:", input.parser);
+
       const apiKey = process.env.AZURE_FORM_RECOGNIZER_KEY;
       const endpoint = process.env.AZURE_FORM_RECOGNIZER_ENDPOINT;
 
@@ -85,9 +98,9 @@ export const fileRouter = createTRPCRouter({
       const result = await poller.pollUntilDone();
 
       return input.kind === "general_ledger"
-        ? parseGeneralLedgerFormRecognizerResult(result)
+        ? parseGeneralLedgerFormRecognizerResult(result, input.parser as Parser)
         : input.kind === "bank_statement"
-        ? parseBankStatementFormRecognizerResult(result)
+        ? parseBankStatementFormRecognizerResult(result, input.parser as Parser)
         : result;
     }),
 });

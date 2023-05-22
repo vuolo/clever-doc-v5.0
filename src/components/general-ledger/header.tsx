@@ -1,10 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { Parser } from "~/types/misc";
 
-export default function GeneralLedgerHeader() {
-  const [selectedAccountingSoftware, setSelectedAccountingSoftware] = useState<
-    string | null
-  >("Accounting CS");
+type Props = {
+  setParser: (parser: Parser) => void;
+};
+
+export default function GeneralLedgerHeader({ setParser }: Props) {
+  const [selectedAccountingSoftware, setSelectedAccountingSoftware] =
+    useState<string>("Accounting CS");
+
+  // Sync the parser with the parent component
+  useEffect(() => {
+    setParser(
+      selectedAccountingSoftware === "Accounting CS"
+        ? "accounting_cs"
+        : selectedAccountingSoftware === "QuickBooks"
+        ? "quickbooks"
+        : "n/a"
+    );
+  }, [selectedAccountingSoftware, setParser]);
 
   const accountingSoftwareOptions = [
     "Accounting CS",

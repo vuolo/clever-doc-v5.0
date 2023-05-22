@@ -36,7 +36,6 @@ const Code: NextPage<Props> = ({ user }) => {
 export default Code;
 
 export const getServerSideProps = async (ctx: GetServerSidePropsContext) => {
-  // TODO: abstract this (into a hook?, look into this)
   const supabase = createServerSupabaseClient(ctx);
   const {
     data: { session },

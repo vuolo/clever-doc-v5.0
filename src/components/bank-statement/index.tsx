@@ -4,6 +4,7 @@ import Dropzone from "../dropzone";
 import Header from "./header";
 import FileDisplay from "../file-display";
 import type { file_details } from "~/types/file";
+import type { Parser } from "~/types/misc";
 
 type SetStateAction<T> = T | ((prevState: T) => T);
 type Dispatch<A> = (value: A) => void;
@@ -17,6 +18,7 @@ export default function UploadBankStatement({
   user,
   setBankStatements,
 }: Props) {
+  const [parser, setParser] = useState<Parser>("accounting_cs");
   const [files, setFiles] = useState<file_details[]>([]);
 
   // Listen for changes to the file object and sync with the parent component
@@ -26,10 +28,20 @@ export default function UploadBankStatement({
 
   return (
     <div className="mt-2 w-full rounded-md bg-white p-6 shadow-md">
-      <Header />
-      <Dropzone kind="bank_statement" user={user} setParentFiles={setFiles} />
+      <Header setParser={setParser} />
+      <Dropzone
+        kind="bank_statement"
+        parser={parser}
+        user={user}
+        setParentFiles={setFiles}
+      />
       {files.map((file) => (
-        <FileDisplay file={file} setParentFiles={setFiles} key={file.id} />
+        <FileDisplay
+          parser={parser}
+          file={file}
+          setParentFiles={setFiles}
+          key={file.id}
+        />
       ))}
     </div>
   );
