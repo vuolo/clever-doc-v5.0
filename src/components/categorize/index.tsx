@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/auth-helpers-nextjs";
 import Header from "./header";
-import { AlertTriangle, Wand2 } from "lucide-react";
+import { Wand2 } from "lucide-react";
 import type { file_details } from "~/types/file";
+import TableCodedTransactions from "./table-coded-transactions";
+import Alert from "./alert";
 
 type Props = {
   user: User;
@@ -23,7 +25,7 @@ export default function Categorize({
 }: Props) {
   const [message, setMessage] = useState<string>("");
   const [transactions, setTransactions] = useState<Transaction[]>([
-    { date: "2023-05-17", description: "Sample Transaction", amount: 100.0 },
+    // { date: "2023-05-17", description: "Sample Transaction", amount: 100.0 },
   ]);
 
   useEffect(() => {
@@ -49,63 +51,23 @@ export default function Categorize({
       <Header />
 
       {/* Alert */}
-      {message && (
-        <div className="mt-2 rounded-md bg-stone-50 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertTriangle
-                className="h-5 w-5 text-stone-400"
-                aria-hidden="true"
-              />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-stone-700">{message}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {message && <Alert message={message} />}
 
       {/* Categorize Button */}
       <div className="mt-2">
-        <button className="flex items-center rounded bg-stone-500 px-4 py-2 text-white hover:bg-stone-600 focus:outline-none">
+        <button
+          className={`flex items-center rounded px-4 py-2 text-white hover:bg-stone-600 focus:outline-none ${
+            message ? "cursor-not-allowed bg-stone-300" : "bg-stone-500"
+          }`}
+          disabled={message ? true : false}
+        >
           <Wand2 className="mr-2" size={16} />
           Categorize
         </button>
       </div>
 
-      {/* Transactions Table */}
-      <div className="mt-4">
-        <table className="min-w-full table-auto">
-          <thead className="justify-between">
-            <tr className="bg-stone-500">
-              <th className="px-2 py-2 text-left text-sm font-medium text-white">
-                Date
-              </th>
-              <th className="px-2 py-2 text-left text-sm font-medium text-white">
-                Description
-              </th>
-              <th className="px-2 py-2 text-left text-sm font-medium text-white">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-stone-200">
-            {transactions.map((transaction, index) => (
-              <tr key={index}>
-                <td className="px-2 py-2 text-sm text-stone-700">
-                  {transaction.date}
-                </td>
-                <td className="px-2 py-2 text-sm text-stone-700">
-                  {transaction.description}
-                </td>
-                <td className="px-2 py-2 text-sm text-stone-700">
-                  {transaction.amount}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Coded Transactions Table */}
+      {!message && <TableCodedTransactions transactions={transactions} />}
     </div>
   );
 }

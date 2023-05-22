@@ -11,7 +11,8 @@ export default function CategorizeHeader() {
 
       {/* Description */}
       <p className="mt-2 text-sm text-gray-700">
-        Categorize your transactions using the upload file above.
+        Categorize your transactions using the uploaded general ledger and bank
+        statement(s) above.
       </p>
     </>
   );
