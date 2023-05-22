@@ -25,7 +25,7 @@ export default function Categorize({
 }: Props) {
   const [message, setMessage] = useState<string>("");
   const [transactions, setTransactions] = useState<Transaction[]>([
-    // { date: "2023-05-17", description: "Sample Transaction", amount: 100.0 },
+    { date: "2023-05-17", description: "Sample Transaction", amount: 100.0 },
   ]);
 
   useEffect(() => {
@@ -54,16 +54,27 @@ export default function Categorize({
       {message && <Alert message={message} />}
 
       {/* Categorize Button */}
-      <div className="mt-2">
+      <div className="mt-2 flex h-fit items-center gap-4">
         <button
           className={`flex items-center rounded px-4 py-2 text-white hover:bg-stone-600 focus:outline-none ${
             message ? "cursor-not-allowed bg-stone-300" : "bg-stone-500"
           }`}
           disabled={message ? true : false}
+          onClick={() => {
+            // TODO: Categorize transactions
+          }}
         >
           <Wand2 className="mr-2" size={16} />
-          Categorize
+          Code
         </button>
+
+        {/* Warning, if transactions are present */}
+        {transactions.length > 0 && (
+          <div className="text-xs text-stone-500">
+            <h3 className="font-medium">Warning!</h3>
+            <p>This will overwrite any existing coded transactions below.</p>
+          </div>
+        )}
       </div>
 
       {/* Coded Transactions Table */}

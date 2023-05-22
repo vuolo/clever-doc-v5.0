@@ -6,12 +6,12 @@ export default function CategorizeHeader() {
         <span className="mr-1 rounded-md bg-gray-200 px-1.5 py-0.5 text-lg">
           3.
         </span>{" "}
-        Categorize
+        Code
       </h1>
 
       {/* Description */}
       <p className="mt-2 text-sm text-gray-700">
-        Categorize your transactions using the uploaded general ledger and bank
+        Code your transactions using the uploaded general ledger and bank
         statement(s) above.
       </p>
     </>
