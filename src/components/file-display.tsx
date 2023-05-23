@@ -195,7 +195,9 @@ export default function FileDisplay({
           <div className="flex">
             <div className="relative h-12 w-12">
               <Image
-                src={getParserImage(parser)}
+                src={getParserImage(
+                  (file?.structure_description as Parser) ?? parser
+                )}
                 alt=""
                 layout="fill"
                 objectFit="cover"
