@@ -30,6 +30,34 @@ export default function Categorize({
   const [selectedStatement, setSelectedStatement] = useState<string>("");
   const [isCoding, setIsCoding] = useState<boolean>(false);
 
+  const updateCodedEntry = (index: number, codedEntry: string) => {
+    setCodedTransactions((prevTransactions) =>
+      prevTransactions.map((transaction, i) =>
+        i === index
+          ? { ...transaction, coded_entry: codedEntry }
+          : { ...transaction }
+      )
+    );
+  };
+
+  const updateSelectedAccount = (index: number, accountNumber: string) => {
+    setCodedTransactions((prevTransactions) =>
+      prevTransactions.map((transaction, i) =>
+        i === index
+          ? {
+              ...transaction,
+              selected_account: accounts.find(
+                (a) => a.number === accountNumber
+              ) || {
+                number: "3130",
+                name: "SUSPENSE",
+              },
+            }
+          : { ...transaction }
+      )
+    );
+  };
+
   // Listen for changes in the bank statements
   useEffect(() => {
     // If the selected statement is not in the list of bank statements, reset codedTransactions.
@@ -39,6 +67,11 @@ export default function Categorize({
       !selectedStatement
     )
       setCodedTransactions([]);
+
+    if (bankStatements?.length === 0) setSelectedStatement("");
+
+    if (!selectedStatement && bankStatements && bankStatements?.length > 0)
+      setSelectedStatement(bankStatements[0]?.hash || "");
   }, [bankStatements, selectedStatement]);
 
   useEffect(() => {
@@ -71,6 +104,7 @@ export default function Categorize({
     // Clear coded transactions
     setCodedTransactions([]);
 
+    // TODO: remove this when the categorization is actually done
     await new Promise<void>((resolve) =>
       setTimeout(() => {
         setIsCoding(false);
@@ -78,9 +112,9 @@ export default function Categorize({
       }, 2000)
     );
 
-    // Map each transaction to a coded transaction
-    setCodedTransactions(
-      filteredTransactions.map((transaction) => {
+    // First get the coded entries for each transaction
+    const codedTransactions: CodedTransaction[] = filteredTransactions.map(
+      (transaction) => {
         // TODO: Categorize the transaction
         const coded_entry = "";
         const account_guesses = [] as CodedTransaction["account_guesses"];
@@ -89,9 +123,16 @@ export default function Categorize({
           ...transaction,
           coded_entry,
           account_guesses,
+          selected_account: {
+            number: "999",
+            name: "Undistributed",
+          },
         };
-      })
+      }
     );
+
+    // Map each transaction to a coded transaction
+    setCodedTransactions(codedTransactions);
   }, [generalLedger, bankStatements, debitsOnly, selectedStatement]);
 
   useEffect(() => {
@@ -120,7 +161,7 @@ export default function Categorize({
       {message && <Alert message={message} />}
 
       {/* [Quick Settings] */}
-      <div className="my-3 flex h-fit items-center gap-4 rounded-l-lg bg-stone-200 px-4 py-1.5">
+      <div className="my-3 flex h-fit flex-col gap-4 rounded-l-lg bg-stone-200 px-4 py-3 sm:flex-row sm:items-center sm:py-1.5">
         <div className="ml-0.5 flex items-center gap-2">
           <Cog className="h-6 w-6 text-stone-400" />
           {/* <h2 className="text-lg font-medium">Quick Settings</h2> */}
@@ -217,12 +258,14 @@ export default function Categorize({
             isCoding={isCoding}
             codedTransactions={codedTransactions}
             accounts={accounts}
+            updateCodedEntry={updateCodedEntry}
+            updateSelectedAccount={updateSelectedAccount}
           />
 
           {/* Code Button */}
           {codedTransactions.length === 0 && (
             <button
-              className={`mx-auto mt-4 flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
+              className={`mx-auto mt-2 flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
                 message || !selectedStatement || isCoding
                   ? "cursor-not-allowed bg-stone-300"
                   : "bg-stone-500 hover:bg-stone-600"

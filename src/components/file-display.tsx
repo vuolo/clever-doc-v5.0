@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { Tooltip } from "react-tooltip";
 import { toast } from "react-toastify";
 import FileSaver from "file-saver";
@@ -24,6 +25,7 @@ import { api } from "~/utils/api";
 import type { file_details } from "~/types/file";
 import type { Account } from "~/types/account";
 import type { Parser } from "~/types/misc";
+import { getParserImage, getParserName } from "~/utils/parser";
 
 type SetStateAction<T> = T | ((prevState: T) => T);
 type Dispatch<A> = (value: A) => void;
@@ -191,8 +193,19 @@ export default function FileDisplay({
       <div className="mx-4 my-4 rounded-lg border bg-white px-6 py-4 md:mx-auto md:w-[90%]">
         <div className="flex flex-col items-center gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-              <FileCheck2 size="24" />
+            <div className="relative h-12 w-12">
+              <Image
+                src={getParserImage(parser)}
+                alt=""
+                layout="fill"
+                objectFit="cover"
+                className="rounded-full border border-black opacity-100"
+              />
+              {/* <div className="relative h-12 w-12 rounded-full">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <FileCheck2 size="24" />
+                </div>
+              </div> */}
             </div>
             <div className="ml-4 flex flex-col justify-center">
               <h2 className="text-lg font-medium leading-6 text-gray-900">
@@ -372,22 +385,22 @@ export default function FileDisplay({
           </div>
         </div>
 
-        {/* <div className="flex justify-center md:justify-start">
+        <div className="mt-1 flex justify-center md:justify-start">
           <div>
-            <p className="mt-3 text-sm text-gray-700">
+            {/* <p className="mt-3 text-sm text-gray-700">
               {file?.structure_name ||
                 (file?.category || "")
                   .replace("general_ledger", "General Ledger")
                   .replace("bank_statement", "Bank Statement")}
-            </p>
+            </p> */}
             {file?.structure_description && (
-              <p className="ml-1 flex items-center gap-1 text-xs text-gray-500">
+              <p className="ml-5 flex items-center gap-1 text-xs text-gray-500">
                 <CornerDownRight size={12} />
-                {file?.structure_description}
+                {getParserName(file?.structure_description as Parser)}
               </p>
             )}
           </div>
-        </div> */}
+        </div>
 
         {/* Progress bar */}
         {!file?.results && file?.beganProcessingAt && (

@@ -9,4 +9,9 @@ export type CodedTransaction = Transaction & {
     };
     confidence: number;
   }[];
+  // UI purposes:
+  selected_account: {
+    name: string;
+    number: string;
+  }
 };

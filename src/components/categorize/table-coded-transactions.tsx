@@ -9,12 +9,16 @@ type Props = {
   isCoding: boolean;
   codedTransactions: CodedTransaction[];
   accounts: Account[];
+  updateCodedEntry: (index: number, codedEntry: string) => void;
+  updateSelectedAccount: (index: number, accountNumber: string) => void;
 };
 
 const TableCodedTransactions: React.FC<Props> = ({
   isCoding,
   codedTransactions,
   accounts,
+  updateCodedEntry,
+  updateSelectedAccount,
 }) => {
   return (
     <div className="mt-4 overflow-hidden rounded">
@@ -114,6 +118,10 @@ const TableCodedTransactions: React.FC<Props> = ({
                           <select
                             id="account-select"
                             className="block w-full appearance-none rounded border border-gray-400 bg-white px-4 py-2 pr-8 leading-tight focus:outline-none focus:ring-2 focus:ring-stone-500"
+                            value={transaction?.selected_account?.number || ""}
+                            onChange={(e) => {
+                              updateSelectedAccount(index, e.target.value);
+                            }}
                           >
                             <option value="">...</option>
                             {accounts.map((account) => (
@@ -145,7 +153,7 @@ const TableCodedTransactions: React.FC<Props> = ({
                           className="block w-full appearance-none rounded border border-gray-400 bg-white px-4 py-2 pr-8 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
                           value={transaction.coded_entry || ""}
                           onChange={(e) => {
-                            // TODO: Update the transaction's coded entry
+                            updateCodedEntry(index, e.target.value);
                           }}
                           placeholder="..."
                         />
