@@ -9,12 +9,4 @@ export type CodedTransaction = Transaction & {
     };
     confidence: number;
   }[];
-  selectedAccountGuessIndex?: number;
-  manualAccountOverride?: {
-    enabled: boolean;
-    account: {
-      name: string;
-      number: string;
-    };
-  };
 };

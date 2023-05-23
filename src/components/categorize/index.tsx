@@ -1,21 +1,19 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/auth-helpers-nextjs";
 import Header from "./header";
-import { Wand2 } from "lucide-react";
-import type { file_details } from "~/types/file";
+import { ChevronDown, Cog, Wand2 } from "lucide-react";
 import TableCodedTransactions from "./table-coded-transactions";
 import Alert from "./alert";
+import type { file_details } from "~/types/file";
+import type { Account } from "~/types/account";
+import type { CodedTransaction } from "~/types/coded-transaction";
+import type { Transaction } from "~/types/transaction";
+import { Switch } from "@headlessui/react";
 
 type Props = {
   user: User;
   generalLedger?: file_details;
   bankStatements?: file_details[];
-};
-
-type Transaction = {
-  date: string;
-  description: string;
-  amount: number;
 };
 
 export default function Categorize({
@@ -24,9 +22,77 @@ export default function Categorize({
   bankStatements,
 }: Props) {
   const [message, setMessage] = useState<string>("");
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { date: "2023-05-17", description: "Sample Transaction", amount: 100.0 },
-  ]);
+  const [codedTransactions, setCodedTransactions] = useState<
+    CodedTransaction[]
+  >([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [debitsOnly, setDebitsOnly] = useState<boolean>(true);
+  const [selectedStatement, setSelectedStatement] = useState<string>("");
+  const [isCoding, setIsCoding] = useState<boolean>(false);
+
+  // Listen for changes in the bank statements
+  useEffect(() => {
+    // If the selected statement is not in the list of bank statements, reset codedTransactions.
+    if (
+      (!bankStatements?.some((bs) => bs.hash === selectedStatement) &&
+        selectedStatement) ||
+      !selectedStatement
+    )
+      setCodedTransactions([]);
+  }, [bankStatements, selectedStatement]);
+
+  useEffect(() => {
+    setCodedTransactions([]);
+  }, [selectedStatement]);
+
+  const categorizeTransactions = useCallback(async () => {
+    if (!generalLedger?.results || !bankStatements?.length) return;
+
+    setIsCoding(true);
+
+    // Get the general ledger accounts
+    const accounts = generalLedger.results as Account[];
+    setAccounts(accounts);
+
+    // Get the selected bank statement
+    const selectedBankStatement = bankStatements.find(
+      (bs) => bs.hash === selectedStatement
+    );
+    if (!selectedBankStatement) return;
+
+    // Get the bank statement transactions
+    const transactions = selectedBankStatement.results as Transaction[];
+
+    // Filter transactions based on debitsOnly state
+    const filteredTransactions = debitsOnly
+      ? transactions.filter((transaction) => transaction.amount < 0)
+      : transactions;
+
+    // Clear coded transactions
+    setCodedTransactions([]);
+
+    await new Promise<void>((resolve) =>
+      setTimeout(() => {
+        setIsCoding(false);
+        resolve();
+      }, 2000)
+    );
+
+    // Map each transaction to a coded transaction
+    setCodedTransactions(
+      filteredTransactions.map((transaction) => {
+        // TODO: Categorize the transaction
+        const coded_entry = "";
+        const account_guesses = [] as CodedTransaction["account_guesses"];
+
+        return {
+          ...transaction,
+          coded_entry,
+          account_guesses,
+        };
+      })
+    );
+  }, [generalLedger, bankStatements, debitsOnly, selectedStatement]);
 
   useEffect(() => {
     if (!generalLedger?.name)
@@ -47,38 +113,134 @@ export default function Categorize({
   }, [generalLedger, bankStatements]);
 
   return (
-    <div className="mt-2 w-full rounded-md bg-white p-6 shadow-md">
+    <div className="mt-2 w-full rounded-md bg-white py-6 pl-6 shadow-md">
       <Header />
 
       {/* Alert */}
       {message && <Alert message={message} />}
 
-      {/* Categorize Button */}
-      <div className="mt-2 flex h-fit items-center gap-4">
-        <button
-          className={`flex items-center rounded px-4 py-2 text-white hover:bg-stone-600 focus:outline-none ${
-            message ? "cursor-not-allowed bg-stone-300" : "bg-stone-500"
-          }`}
-          disabled={message ? true : false}
-          onClick={() => {
-            // TODO: Categorize transactions
-          }}
-        >
-          <Wand2 className="mr-2" size={16} />
-          Code
-        </button>
+      {/* [Quick Settings] */}
+      <div className="my-3 flex h-fit items-center gap-4 rounded-l-lg bg-stone-200 px-4 py-1.5">
+        <div className="ml-0.5 flex items-center gap-2">
+          <Cog className="h-6 w-6 text-stone-400" />
+          {/* <h2 className="text-lg font-medium">Quick Settings</h2> */}
+        </div>
 
-        {/* Warning, if transactions are present */}
-        {transactions.length > 0 && (
-          <div className="text-xs text-stone-500">
-            <h3 className="font-medium">Warning!</h3>
-            <p>This will overwrite any existing coded transactions below.</p>
+        {/* Bank Statement Dropdown */}
+        <div className="relative inline-flex w-fit">
+          <select
+            id="account-select"
+            className="block w-full appearance-none rounded border border-gray-400 bg-white px-4 py-2 pr-8 leading-tight focus:outline-none focus:ring-2 focus:ring-stone-500"
+            disabled={bankStatements?.length ? false : true}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              bankStatements?.length && setSelectedStatement(e.target.value)
+            }
+          >
+            <option value="">Select Bank Statement...</option>
+            {bankStatements?.map((bankStatement) => (
+              <option key={bankStatement.hash} value={bankStatement.hash}>
+                {bankStatement.name}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            <ChevronDown className="h-4 w-4" />
           </div>
-        )}
+        </div>
+
+        {/* Debits Only Switch */}
+        <div
+          className="flex items-center gap-2"
+          onClick={() => setDebitsOnly((prev) => !prev)}
+        >
+          <Switch
+            checked={debitsOnly}
+            className={`${
+              debitsOnly
+                ? "border-white bg-stone-700"
+                : "border-stone-700 bg-white"
+            } relative inline-flex h-6 w-11 items-center rounded-full border`}
+          >
+            <span className="sr-only">Debits Only</span>
+            <span
+              className={`${
+                debitsOnly
+                  ? "translate-x-6 bg-white"
+                  : "translate-x-1 bg-stone-700"
+              } inline-block h-4 w-4 transform rounded-full`}
+            />
+          </Switch>
+          <label htmlFor="debits-only" className="cursor-pointer font-medium">
+            Debits Only
+          </label>
+        </div>
       </div>
 
+      {/* Code Again Button */}
+      {codedTransactions.length > 0 && (
+        <div className="mt-2 flex h-fit items-center gap-4 pr-6">
+          {/* Code Button */}
+          <button
+            className={`flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
+              message || !selectedStatement || isCoding
+                ? "cursor-not-allowed bg-stone-300"
+                : "bg-stone-500 hover:bg-stone-600"
+            }`}
+            disabled={message || !selectedStatement ? true : false}
+            onClick={() => {
+              void categorizeTransactions();
+            }}
+          >
+            <Wand2
+              className={`mr-2 ${isCoding ? "animate-spin" : ""}`}
+              size={16}
+            />
+            {isCoding ? "Coding..." : "Code Again"}
+          </button>
+
+          {/* Warning, if transactions are present */}
+          {!message && codedTransactions.length > 0 && (
+            <div className="text-xs text-gray-500">
+              <h3 className="font-medium">Warning!</h3>
+              <p>This will overwrite any existing coded transactions below.</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Coded Transactions Table */}
-      {!message && <TableCodedTransactions transactions={transactions} />}
+      {!message && (
+        <div
+          className={`mr-6 ${codedTransactions.length === 0 ? "mb-12" : ""}`}
+        >
+          <TableCodedTransactions
+            isCoding={isCoding}
+            codedTransactions={codedTransactions}
+            accounts={accounts}
+          />
+
+          {/* Code Button */}
+          {codedTransactions.length === 0 && (
+            <button
+              className={`mx-auto mt-4 flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
+                message || !selectedStatement || isCoding
+                  ? "cursor-not-allowed bg-stone-300"
+                  : "bg-stone-500 hover:bg-stone-600"
+              }`}
+              disabled={message || !selectedStatement ? true : false}
+              onClick={() => {
+                void categorizeTransactions();
+              }}
+            >
+              <Wand2
+                className={`mr-2 ${isCoding ? "animate-spin" : ""}`}
+                size={16}
+              />
+              {isCoding ? "Coding..." : "Code Transactions"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
