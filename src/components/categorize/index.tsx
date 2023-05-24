@@ -9,6 +9,9 @@ import type { Account } from "~/types/account";
 import type { CodedTransaction } from "~/types/coded-transaction";
 import type { Transaction } from "~/types/transaction";
 import { Switch } from "@headlessui/react";
+import { api } from "~/utils/api";
+import { toast } from "react-toastify";
+import { toastMessage } from "~/utils/helpers";
 
 type Props = {
   user: User;
@@ -29,6 +32,19 @@ export default function Categorize({
   const [debitsOnly, setDebitsOnly] = useState<boolean>(true);
   const [selectedStatement, setSelectedStatement] = useState<string>("");
   const [isCoding, setIsCoding] = useState<boolean>(false);
+
+  const makeCodedEntries = api.gpt.makeCodedEntries.useMutation({
+    onError: (error) => {
+      toast.error(
+        toastMessage(
+          "An error occurred while trying to make coded entries.",
+          error.message ?? "Unknown error"
+        )
+      );
+      console.error("Error:", error);
+      setIsCoding(false);
+    },
+  });
 
   const updateCodedEntry = (index: number, codedEntry: string) => {
     setCodedTransactions((prevTransactions) =>
@@ -100,40 +116,80 @@ export default function Categorize({
     const filteredTransactions = debitsOnly
       ? transactions.filter((transaction) => transaction.amount < 0)
       : transactions;
+    console.log("filteredTransactions:", filteredTransactions);
 
     // Clear coded transactions
     setCodedTransactions([]);
 
-    // TODO: remove this when the categorization is actually done
-    await new Promise<void>((resolve) =>
-      setTimeout(() => {
-        setIsCoding(false);
-        resolve();
-      }, 2000)
-    );
+    try {
+      const transactionDescriptions = filteredTransactions.map(
+        (transaction) => transaction.description
+      );
+      const codedEntries = [
+        ...new Set(
+          accounts.reduce((descriptions: string[], account: Account) => {
+            const accountDescriptions = account.entries.map(
+              (entry) => entry.description
+            );
+            return [...descriptions, ...accountDescriptions];
+          }, [])
+        ),
+      ];
+      console.log("Sending to openai chat completion api...");
+      console.log("transactionDescriptions:", transactionDescriptions);
+      console.log("codedEntries:", codedEntries);
 
-    // First get the coded entries for each transaction
-    const codedTransactions: CodedTransaction[] = filteredTransactions.map(
-      (transaction) => {
-        // TODO: Categorize the transaction
-        const coded_entry = "";
-        const account_guesses = [] as CodedTransaction["account_guesses"];
+      // Request to openai chat completion api to get the coded entries.
+      const madeCodedEntriesStr = await makeCodedEntries.mutateAsync({
+        transactionDescriptions,
+        codedEntries,
+      });
+      if (!madeCodedEntriesStr) return;
+      console.log("madeCodedEntriesStr:", madeCodedEntriesStr);
+      const madeCodedEntries = JSON.parse(madeCodedEntriesStr) as string[];
+      console.log("madeCodedEntries:", madeCodedEntries);
 
-        return {
-          ...transaction,
-          coded_entry,
-          account_guesses,
-          selected_account: {
-            number: "999",
-            name: "Undistributed",
-          },
-        };
-      }
-    );
+      // Make a "default" account for transactions that don't match any account
+      const default_account = accounts.find(
+        (account) => account.name === "SUSPENSE"
+      ) as Account;
 
-    // Map each transaction to a coded transaction
-    setCodedTransactions(codedTransactions);
-  }, [generalLedger, bankStatements, debitsOnly, selectedStatement]);
+      console.log("filteredTransactions:", filteredTransactions);
+
+      // First get the coded entries for each transaction
+      const codedTransactions: CodedTransaction[] = filteredTransactions.map(
+        (transaction, i) => {
+          // TODO: Categorize the transaction
+          const coded_entry = madeCodedEntries[i]?.toUpperCase() || "";
+          const account_guesses = [] as CodedTransaction["account_guesses"];
+
+          return {
+            ...transaction,
+            coded_entry,
+            account_guesses,
+            selected_account: {
+              number: default_account.number,
+              name: default_account.name,
+            },
+          };
+        }
+      );
+      console.log("codedTransactions:", codedTransactions);
+
+      // Map each transaction to a coded transaction
+      setCodedTransactions(codedTransactions);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsCoding(false);
+    }
+  }, [
+    generalLedger,
+    bankStatements,
+    debitsOnly,
+    selectedStatement,
+    makeCodedEntries,
+  ]);
 
   useEffect(() => {
     if (!generalLedger?.name)
