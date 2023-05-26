@@ -91,20 +91,21 @@ export function makeAccountGuesses_levenshtein(
       const confidence = 1 - distance / codedEntry.length;
 
       // For now, we are only including accounts with a confidence score of 0.8 or higher. TODO: fine tune this?
-      if (confidence > 0.8)
+      if (confidence > 0.75)
         account_guesses.push({
           account: {
             name: account.name,
             number: account.number,
           },
           confidence,
+          quantity: entry.quantity,
         });
     });
   });
 
   // By now, we will have an array of account guesses with confidence scores.
   // But, there may be duplicate accounts with different confidence scores.
-  // For now, just remove the duplicates. TODO: Improve this, and weigh it into the confidence score.
+  // For now, just remove the duplicates.
   account_guesses = account_guesses.filter(
     (account, index, self) =>
       index ===
@@ -116,7 +117,9 @@ export function makeAccountGuesses_levenshtein(
   );
 
   return [
-    ...account_guesses,
+    ...account_guesses
+      .sort((a, b) => b.confidence - a.confidence)
+      .sort((a, b) => (b.quantity || 0) - (a.quantity || 0)),
     {
       account: {
         name: default_account.name,

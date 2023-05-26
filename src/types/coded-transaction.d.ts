@@ -8,10 +8,11 @@ export type CodedTransaction = Transaction & {
       number: string;
     };
     confidence: number;
+    quantity?: number; // temp, for categorizer
   }[];
   // UI purposes:
   selected_account: {
     name: string;
     number: string;
-  }
+  };
 };

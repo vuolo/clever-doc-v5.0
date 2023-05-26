@@ -1,9 +1,12 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, CircleOff } from "lucide-react";
 import type { Account } from "~/types/account";
 import type { CodedTransaction } from "~/types/coded-transaction";
 import scanningGif from "../../../public/images/scanning.gif";
+import { differenceInMinutes, differenceInSeconds } from "date-fns";
+import { ProgressBar } from "../progress-bar";
+import { Tooltip } from "react-tooltip";
 
 type Props = {
   isCoding: boolean;
@@ -20,6 +23,43 @@ const TableCodedTransactions: React.FC<Props> = ({
   updateCodedEntry,
   updateSelectedAccount,
 }) => {
+  const [beganCodingAt, setBeganCodingAt] = useState<Date | null>(null);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (!isCoding) {
+      setProgress(1);
+      setBeganCodingAt(null);
+    } else {
+      setProgress(0.05);
+      setBeganCodingAt(new Date());
+    }
+  }, [isCoding]);
+
+  const [timeAgo, setTimeAgo] = useState("");
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const diffInMinutes = differenceInMinutes(now, beganCodingAt ?? now);
+      const diffInSeconds = differenceInSeconds(now, beganCodingAt ?? now) % 60; // Get the remaining seconds after minutes are subtracted
+      let timeAgo = "";
+
+      if (diffInMinutes > 0)
+        timeAgo = `${diffInMinutes} minute${
+          diffInMinutes > 1 ? "s" : ""
+        }, ${diffInSeconds} second${diffInSeconds > 1 ? "s" : ""} ago`;
+      else
+        timeAgo = `${diffInSeconds} second${diffInSeconds > 1 ? "s" : ""} ago`;
+
+      setTimeAgo(timeAgo);
+
+      // Add progress
+      if (diffInSeconds <= 30 && progress < 0.95)
+        setProgress((prevProgress) => prevProgress + 0.031);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isCoding, progress, beganCodingAt]);
+
   return (
     <div className="mt-4 overflow-hidden rounded">
       {codedTransactions.length === 0 ? (
@@ -36,11 +76,15 @@ const TableCodedTransactions: React.FC<Props> = ({
           ) : (
             <CircleOff className="mb-4 h-12 w-12 text-stone-200" />
           )}
-          <p className={`text-center ${isCoding ? "" : "text-stone-500"}`}>
+          <p className={`mb-2 text-center ${isCoding ? "" : "text-stone-500"}`}>
             {isCoding
               ? "Please wait while we code your transactions..."
               : "There are currently no coded transactions to display."}
           </p>
+          {isCoding && <ProgressBar progress={progress} />}
+          {isCoding && (
+            <p className="mt-3 text-xs text-gray-500">Started {timeAgo}</p>
+          )}
         </div>
       ) : (
         // Otherwise, display the transactions in a table
@@ -113,7 +157,7 @@ const TableCodedTransactions: React.FC<Props> = ({
                           htmlFor="account-select"
                           className="mb-2 block font-medium text-gray-700"
                         >
-                          Select an Account
+                          Account
                         </label>
                         <div className="relative inline-flex w-full">
                           <select
@@ -170,39 +214,48 @@ const TableCodedTransactions: React.FC<Props> = ({
                       <div className="overflow-x-auto whitespace-nowrap">
                         <div className="inline-grid grid-flow-col gap-4">
                           {transaction.account_guesses.map((accountGuess) => (
-                            <div
-                              key={accountGuess.account.number}
-                              onClick={() => {
-                                updateSelectedAccount(
-                                  index,
+                            <Fragment key={accountGuess.account.number}>
+                              <div
+                                data-tooltip-id="quantity-tooltip"
+                                data-tooltip-content={`${
+                                  accountGuess.quantity ?? "0"
+                                } Matches`}
+                                onClick={() => {
+                                  updateSelectedAccount(
+                                    index,
+                                    accountGuess.account.number
+                                  );
+                                }}
+                                className={`group flex cursor-pointer flex-col items-start justify-between rounded-md border-2 ${
+                                  index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
+                                } px-3 py-2 transition-colors duration-200 hover:shadow-lg ${
+                                  transaction.selected_account?.number ===
                                   accountGuess.account.number
-                                );
-                              }}
-                              className={`group flex cursor-pointer flex-col items-start justify-between rounded-md border-2 ${
-                                index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-                              } px-3 py-2 transition-colors duration-200 hover:shadow-lg ${
-                                transaction.selected_account?.number ===
-                                accountGuess.account.number
-                                  ? "border-indigo-500 bg-indigo-100"
-                                  : accountGuess.confidence > 0.7
-                                  ? "border-green-500 hover:bg-green-50"
-                                  : accountGuess.confidence > 0.4
-                                  ? "border-yellow-500 hover:bg-yellow-50"
-                                  : "border-red-500 hover:bg-red-50"
-                              }`}
-                            >
-                              <div className="flex w-full items-start justify-between gap-2">
-                                <span className="text-sm font-semibold text-gray-700">
-                                  {accountGuess.account.number}
-                                </span>
-                                <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">
-                                  {(accountGuess.confidence * 100).toFixed(2)}%
+                                    ? "border-indigo-500 bg-indigo-100"
+                                    : accountGuess.confidence > 0.7
+                                    ? "border-green-500 hover:bg-green-50"
+                                    : accountGuess.confidence > 0.4
+                                    ? "border-yellow-500 hover:bg-yellow-50"
+                                    : "border-red-500 hover:bg-red-50"
+                                }`}
+                              >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                  <span className="text-sm font-semibold text-gray-700">
+                                    {accountGuess.account.number}
+                                  </span>
+                                  <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">
+                                    {(accountGuess.confidence * 100).toFixed(2)}
+                                    %
+                                  </span>
+                                </div>
+                                <span className="text-xs text-gray-800">
+                                  {accountGuess.account.name}
                                 </span>
                               </div>
-                              <span className="text-xs text-gray-800">
-                                {accountGuess.account.name}
-                              </span>
-                            </div>
+                              {accountGuess.quantity && (
+                                <Tooltip id="quantity-tooltip" place="bottom" />
+                              )}
+                            </Fragment>
                           ))}
                         </div>
                       </div>

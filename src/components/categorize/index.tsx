@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/auth-helpers-nextjs";
 import Header from "./header";
-import { ChevronDown, Cog, Wand2 } from "lucide-react";
+import {
+  ArrowRightFromLine,
+  ChevronDown,
+  Cog,
+  Share,
+  Share2,
+  Wand2,
+} from "lucide-react";
 import TableCodedTransactions from "./table-coded-transactions";
 import Alert from "./alert";
 import type { file_details } from "~/types/file";
@@ -38,7 +45,8 @@ export default function Categorize({
     CodedTransaction[]
   >([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [debitsOnly, setDebitsOnly] = useState<boolean>(true);
+  const [includeDebits, setIncludeDebits] = useState<boolean>(true);
+  const [includeDeposits, setIncludeDeposits] = useState<boolean>(false);
   const [selectedStatement, setSelectedStatement] = useState<string>("");
   const [isCoding, setIsCoding] = useState<boolean>(false);
   if (typeof window !== "undefined")
@@ -126,10 +134,13 @@ export default function Categorize({
     // Get the bank statement transactions
     const transactions = selectedBankStatement.results as Transaction[];
 
-    // Filter transactions based on debitsOnly state
-    const filteredTransactions = debitsOnly
-      ? transactions.filter((transaction) => transaction.amount < 0)
-      : transactions;
+    // Filter transactions based on includeDebits & includeDeposits state
+    const filteredTransactions =
+      includeDebits && !includeDeposits
+        ? transactions.filter((transaction) => transaction.amount < 0)
+        : !includeDebits && includeDeposits
+        ? transactions.filter((transaction) => transaction.amount >= 0)
+        : transactions;
     console.log("filteredTransactions:", filteredTransactions);
 
     // Clear coded transactions
@@ -248,7 +259,8 @@ export default function Categorize({
   }, [
     generalLedger,
     bankStatements,
-    debitsOnly,
+    includeDebits,
+    includeDeposits,
     selectedStatement,
     makeCodedEntries,
   ]);
@@ -307,63 +319,112 @@ export default function Categorize({
           </div>
         </div>
 
-        {/* Debits Only Switch */}
+        {/* Include Debits Switch */}
         <div
           className="flex items-center gap-2"
-          onClick={() => setDebitsOnly((prev) => !prev)}
+          onClick={() => setIncludeDebits((prev) => !prev)}
         >
           <Switch
-            checked={debitsOnly}
+            checked={includeDebits}
             className={`${
-              debitsOnly
+              includeDebits
                 ? "border-white bg-stone-700"
                 : "border-stone-700 bg-white"
             } relative inline-flex h-6 w-11 items-center rounded-full border`}
           >
-            <span className="sr-only">Debits Only</span>
+            <span className="sr-only">Debits</span>
             <span
               className={`${
-                debitsOnly
+                includeDebits
                   ? "translate-x-6 bg-white"
                   : "translate-x-1 bg-stone-700"
               } inline-block h-4 w-4 transform rounded-full`}
             />
           </Switch>
           <label htmlFor="debits-only" className="cursor-pointer font-medium">
-            Debits Only
+            Debits
+          </label>
+        </div>
+
+        {/* Include Deposits Switch */}
+        <div
+          className="flex items-center gap-2"
+          onClick={() => setIncludeDeposits((prev) => !prev)}
+        >
+          <Switch
+            checked={includeDebits}
+            className={`${
+              includeDeposits
+                ? "border-white bg-stone-700"
+                : "border-stone-700 bg-white"
+            } relative inline-flex h-6 w-11 items-center rounded-full border`}
+          >
+            <span className="sr-only">Deposits</span>
+            <span
+              className={`${
+                includeDeposits
+                  ? "translate-x-6 bg-white"
+                  : "translate-x-1 bg-stone-700"
+              } inline-block h-4 w-4 transform rounded-full`}
+            />
+          </Switch>
+          <label htmlFor="deposits-only" className="cursor-pointer font-medium">
+            Deposits
           </label>
         </div>
       </div>
 
       {/* Code Again Button */}
       {codedTransactions.length > 0 && (
-        <div className="mt-2 flex h-fit items-center gap-4 pr-6">
-          {/* Code Button */}
+        <div className="mt-2 flex h-fit justify-between gap-2 pr-6">
+          <div className="flex items-center gap-4">
+            {/* Code Button */}
+            <button
+              className={`flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
+                message || !selectedStatement || isCoding
+                  ? "cursor-not-allowed bg-stone-300"
+                  : "bg-stone-500 hover:bg-stone-600"
+              }`}
+              disabled={message || !selectedStatement ? true : false}
+              onClick={() => {
+                void categorizeTransactions();
+              }}
+            >
+              <Wand2
+                className={`mr-2 ${isCoding ? "animate-spin" : ""}`}
+                size={16}
+              />
+              {isCoding ? "Coding..." : "Code Again"}
+            </button>
+
+            {/* Warning, if transactions are present */}
+            {!message && codedTransactions.length > 0 && (
+              <div className="text-xs text-gray-500">
+                <h3 className="font-medium">Warning!</h3>
+                <p>
+                  This will overwrite any existing coded transactions below.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Export Button */}
           <button
             className={`flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
               message || !selectedStatement || isCoding
                 ? "cursor-not-allowed bg-stone-300"
                 : "bg-stone-500 hover:bg-stone-600"
             }`}
-            disabled={message || !selectedStatement ? true : false}
+            disabled={
+              message || !selectedStatement || !codedTransactions ? true : false
+            }
             onClick={() => {
-              void categorizeTransactions();
+              // TODO: export as a macro
             }}
           >
-            <Wand2
-              className={`mr-2 ${isCoding ? "animate-spin" : ""}`}
-              size={16}
-            />
-            {isCoding ? "Coding..." : "Code Again"}
+            <Share className="mr-2" size={16} />
+            Export Macro
           </button>
-
-          {/* Warning, if transactions are present */}
-          {!message && codedTransactions.length > 0 && (
-            <div className="text-xs text-gray-500">
-              <h3 className="font-medium">Warning!</h3>
-              <p>This will overwrite any existing coded transactions below.</p>
-            </div>
-          )}
         </div>
       )}
 
