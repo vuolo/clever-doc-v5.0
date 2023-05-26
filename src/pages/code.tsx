@@ -28,6 +28,8 @@ const Code: NextPage<Props> = ({ user }) => {
           generalLedger={generalLedger}
           bankStatements={bankStatements}
         />
+        {/* Spacer */}
+        <div className="h-1 pt-6"></div>
       </section>
     </div>
   );

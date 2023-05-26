@@ -22,12 +22,15 @@ import type { file_details } from "~/types/file";
 import type { Account } from "~/types/account";
 import type { Parser } from "~/types/misc";
 
+type SetStateAction<T> = T | ((prevState: T) => T);
+type Dispatch<A> = (value: A) => void;
+
 type Props = {
   kind: "general_ledger" | "bank_statement";
   parser: Parser;
   user: User;
-  setParentFile?: (file?: file_details) => void;
-  setParentFiles?: (files: file_details[]) => void;
+  setParentFile?: Dispatch<SetStateAction<file_details | undefined>>;
+  setParentFiles?: Dispatch<SetStateAction<file_details[]>>;
 };
 
 export default function Dropzone({
@@ -41,6 +44,7 @@ export default function Dropzone({
   const addFileDetails = api.file.addFileDetails.useMutation();
   const updateFileDetails = api.file.updateFileDetails.useMutation();
 
+  // TODO: fix problem when deleting a file from file-display (it updates parentFiles), it doesn't sync here
   const [file, setFile] = useState<file_details>();
   const [files, setFiles] = useState<file_details[]>([]);
 

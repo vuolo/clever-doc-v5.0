@@ -11,7 +11,16 @@ import type { Transaction } from "~/types/transaction";
 import { Switch } from "@headlessui/react";
 import { api } from "~/utils/api";
 import { toast } from "react-toastify";
-import { toastMessage } from "~/utils/helpers";
+import { estimateTokens, toastMessage } from "~/utils/helpers";
+import {
+  buildCodedEntriesMessages,
+  makeAccountGuesses,
+} from "~/utils/categorizer";
+import {
+  type ChatCompletionRequestMessage,
+  ChatCompletionRequestMessageRoleEnum,
+} from "openai";
+import { testAccountGuesses_levenshtein } from "~/tests/levenshtein-test-script";
 
 type Props = {
   user: User;
@@ -32,6 +41,10 @@ export default function Categorize({
   const [debitsOnly, setDebitsOnly] = useState<boolean>(true);
   const [selectedStatement, setSelectedStatement] = useState<string>("");
   const [isCoding, setIsCoding] = useState<boolean>(false);
+  if (typeof window !== "undefined")
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    (window as any).testAccountGuesses_levenshtein =
+      testAccountGuesses_levenshtein;
 
   const makeCodedEntries = api.gpt.makeCodedEntries.useMutation({
     onError: (error) => {
@@ -102,6 +115,7 @@ export default function Categorize({
     // Get the general ledger accounts
     const accounts = generalLedger.results as Account[];
     setAccounts(accounts);
+    console.log("accounts:", accounts);
 
     // Get the selected bank statement
     const selectedBankStatement = bankStatements.find(
@@ -139,6 +153,50 @@ export default function Categorize({
       console.log("transactionDescriptions:", transactionDescriptions);
       console.log("codedEntries:", codedEntries);
 
+      const [estimatedPromptTokens, estimatedSampledTokens] = [
+        estimateTokens(
+          buildCodedEntriesMessages(transactionDescriptions, codedEntries)
+        ),
+        estimateTokens([
+          {
+            role: ChatCompletionRequestMessageRoleEnum.Assistant,
+            content: JSON.stringify(transactionDescriptions),
+          },
+        ] as Array<ChatCompletionRequestMessage>),
+      ];
+      console.log("--- ESTIMATED COSTS ---");
+      console.log("# of Prompt Tokens (input tokens):", estimatedPromptTokens);
+      console.log(
+        "# of Sampled Tokens (generated tokens):",
+        estimatedSampledTokens
+      );
+      const estimatedPromptCost = (estimatedPromptTokens / 1000) * 0.03;
+      const estimatedSampledCost = (estimatedSampledTokens / 1000) * 0.06;
+      console.log(
+        "Cost of Prompt Tokens:",
+        "$" + estimatedPromptCost.toFixed(3)
+      );
+      console.log(
+        "Cost of Sampled Tokens:",
+        "$" + estimatedSampledCost.toFixed(3)
+      );
+      console.log(
+        "Total Cost to Code:",
+        "$" + (estimatedPromptCost + estimatedSampledCost).toFixed(3)
+      );
+      toast.info(
+        toastMessage(
+          "Submitting to OpenAI...",
+          "$" +
+            (estimatedPromptCost + estimatedSampledCost).toFixed(3) +
+            " (Prompt: $" +
+            estimatedPromptCost.toFixed(3) +
+            ", Sampled: $" +
+            estimatedSampledCost.toFixed(3) +
+            ")"
+        )
+      );
+
       // Request to openai chat completion api to get the coded entries.
       const madeCodedEntriesStr = await makeCodedEntries.mutateAsync({
         transactionDescriptions,
@@ -159,17 +217,21 @@ export default function Categorize({
       // First get the coded entries for each transaction
       const codedTransactions: CodedTransaction[] = filteredTransactions.map(
         (transaction, i) => {
-          // TODO: Categorize the transaction
           const coded_entry = madeCodedEntries[i]?.toUpperCase() || "";
-          const account_guesses = [] as CodedTransaction["account_guesses"];
+          const account_guesses = makeAccountGuesses(
+            coded_entry,
+            accounts,
+            "levenshtein"
+          );
 
           return {
             ...transaction,
             coded_entry,
             account_guesses,
             selected_account: {
-              number: default_account.number,
-              name: default_account.name,
+              number:
+                account_guesses[0]?.account.number || default_account.number,
+              name: account_guesses[0]?.account.name || default_account.name,
             },
           };
         }

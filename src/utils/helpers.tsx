@@ -1,3 +1,5 @@
+import GPT3Tokenizer from "gpt3-tokenizer";
+import { type ChatCompletionRequestMessage } from "openai";
 import { type CSSProperties } from "react";
 
 export function getFormattedFileSize(size: number): string {
@@ -57,4 +59,12 @@ export function getUniqueFileName(file_name: string, file_id: string) {
   const FILE_EXTENSION_REGEX = new RegExp(`.${fileExtension}$`);
   const fileNameNoExtension = file_name.replace(FILE_EXTENSION_REGEX, "");
   return `${fileNameNoExtension}-${file_id}.${fileExtension}`;
+}
+
+export function estimateTokens(messages: Array<ChatCompletionRequestMessage>) {
+  // Use GPT3 tokenizer to get number of tokens
+  const tokenizer = new GPT3Tokenizer({ type: "gpt3" });
+  return messages.reduce((sum, message) => {
+    return sum + tokenizer.encode(message.content).bpe.length;
+  }, 0);
 }

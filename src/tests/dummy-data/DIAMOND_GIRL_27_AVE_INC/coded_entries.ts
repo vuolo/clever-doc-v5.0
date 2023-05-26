@@ -1,0 +1,27 @@
+const coded_entries = [
+  "XUCHANG HAIR LLC",
+  "ADP PAY-BY-PAY",
+  "BANKCARD",
+  "ADP PAYROLL FEES",
+  "WOLFSON",
+  "FPL",
+  "ADP WAGE PAY",
+  "ADP TAX",
+  "EXADIGM",
+  "ADP PAY-BY-PAY",
+  "ADP PAYROLL FEES",
+  "ADP WAGE PAY",
+  "ADP TAX",
+  "ADP PAY-BY-PAY",
+  "ADP PAYROLL FEES",
+  "FDOR",
+  "ADP WAGE PAY",
+  "ADP TAX",
+  "ADP PAYROLL FEES",
+  "ADP WAGE PAY",
+  "ADP TAX",
+  "ADP TAX",
+  "ADP PAYROLL FEES",
+];
+
+export default coded_entries;

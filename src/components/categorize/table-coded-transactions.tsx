@@ -94,6 +94,7 @@ const TableCodedTransactions: React.FC<Props> = ({
                     })}
                   </td>
                 </tr>
+
                 {/* Row 2: Categorization Information */}
                 <tr className={`${index % 2 === 0 ? "bg-stone-100" : ""} py-2`}>
                   <td className="pb-2 pt-2 text-sm text-stone-700" colSpan={3}>
@@ -163,42 +164,46 @@ const TableCodedTransactions: React.FC<Props> = ({
                 </tr>
 
                 {/* Row 3: Account Confidence Scores */}
-                {transaction.account_guesses.length > 0 ?? (
+                {transaction.account_guesses.length > 0 && (
                   <tr className={`${index % 2 === 0 ? "bg-stone-100" : ""}`}>
                     <td className="max-w-sm pb-8 pl-4" colSpan={3}>
                       <div className="overflow-x-auto whitespace-nowrap">
                         <div className="inline-grid grid-flow-col gap-4">
-                          {transaction.account_guesses.map(
-                            (accountGuess, accIndex) => (
-                              <div
-                                key={accountGuess.account.number}
-                                className={`group flex cursor-pointer flex-col items-start justify-between rounded-md border-2 ${
-                                  index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-                                } px-3 py-2 transition-colors duration-200 hover:shadow-lg ${
-                                  accIndex === 0 // For now only highlight the first guess, but TODO: in the future make this highlight the selected guess.
-                                    ? "border-indigo-500 bg-indigo-100"
-                                    : accountGuess.confidence > 0.7
-                                    ? "border-green-500 hover:bg-green-50"
-                                    : accountGuess.confidence > 0.4
-                                    ? "border-yellow-500 hover:bg-yellow-50"
-                                    : "border-red-500 hover:bg-red-50"
-                                }`}
-                              >
-                                <div className="flex w-full items-start justify-between gap-2">
-                                  <span className="text-sm font-semibold text-gray-700">
-                                    {accountGuess.account.number}
-                                  </span>
-                                  <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">
-                                    {(accountGuess.confidence * 100).toFixed(2)}
-                                    %
-                                  </span>
-                                </div>
-                                <span className="text-xs text-gray-800">
-                                  {accountGuess.account.name}
+                          {transaction.account_guesses.map((accountGuess) => (
+                            <div
+                              key={accountGuess.account.number}
+                              onClick={() => {
+                                updateSelectedAccount(
+                                  index,
+                                  accountGuess.account.number
+                                );
+                              }}
+                              className={`group flex cursor-pointer flex-col items-start justify-between rounded-md border-2 ${
+                                index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
+                              } px-3 py-2 transition-colors duration-200 hover:shadow-lg ${
+                                transaction.selected_account?.number ===
+                                accountGuess.account.number
+                                  ? "border-indigo-500 bg-indigo-100"
+                                  : accountGuess.confidence > 0.7
+                                  ? "border-green-500 hover:bg-green-50"
+                                  : accountGuess.confidence > 0.4
+                                  ? "border-yellow-500 hover:bg-yellow-50"
+                                  : "border-red-500 hover:bg-red-50"
+                              }`}
+                            >
+                              <div className="flex w-full items-start justify-between gap-2">
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {accountGuess.account.number}
+                                </span>
+                                <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">
+                                  {(accountGuess.confidence * 100).toFixed(2)}%
                                 </span>
                               </div>
-                            )
-                          )}
+                              <span className="text-xs text-gray-800">
+                                {accountGuess.account.name}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </td>

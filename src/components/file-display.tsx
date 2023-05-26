@@ -193,7 +193,7 @@ export default function FileDisplay({
       <div className="mx-4 my-4 rounded-lg border bg-white px-6 py-4 md:mx-auto md:w-[90%]">
         <div className="flex flex-col items-center gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex">
-            <div className="relative h-12 w-12">
+            <div className="relative aspect-square h-12 w-12">
               <Image
                 src={getParserImage(
                   (file?.structure_description as Parser) ?? parser
