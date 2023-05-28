@@ -15,7 +15,7 @@ type Props = {
 };
 
 export default function UploadGeneralLedger({ user, setGeneralLedger }: Props) {
-  const [parser, setParser] = useState<Parser>("bofa_business");
+  const [parser, setParser] = useState<Parser>("accounting_cs");
   const [file, setFile] = useState<file_details>();
 
   // Listen for changes to the file object and sync with the parent component

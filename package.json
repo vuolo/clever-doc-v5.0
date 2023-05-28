@@ -43,6 +43,7 @@
     "superjson": "1.12.2",
     "switch": "^0.0.0",
     "uuid": "^9.0.0",
+    "xmlbuilder2": "^3.1.1",
     "zod": "^3.21.4"
   },
   "devDependencies": {

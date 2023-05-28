@@ -60,6 +60,7 @@ Example Assistant Output:
 IMPORTANT:
 • You must return the EXACT number of coded entries, in order, as the user-submitted transaction descriptions!
 • Don't include confirmation numbers, id numbers, or extra transaction metadata.
+• Always code "Western Union" or "WU M/O" as "WU".
 
 Refer to the original prompt for example formats.
 `;

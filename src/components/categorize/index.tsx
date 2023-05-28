@@ -28,6 +28,12 @@ import {
   ChatCompletionRequestMessageRoleEnum,
 } from "openai";
 import { testAccountGuesses_levenshtein } from "~/tests/levenshtein-test-script";
+import { createAndDownloadFile, generateMacro } from "~/utils/macro-gen";
+
+const isMac =
+  typeof window !== "undefined"
+    ? navigator.platform.toUpperCase().indexOf("MAC") >= 0
+    : false;
 
 type Props = {
   user: User;
@@ -283,6 +289,24 @@ export default function Categorize({
     else setMessage("");
   }, [generalLedger, bankStatements]);
 
+  const exportCodedTransactions = useCallback(() => {
+    const macroFile = generateMacro(
+      "BSCA.bankStatement",
+      isMac ? "Mac" : "Windows",
+      "Accounting CS",
+      codedTransactions,
+      bankStatements?.find(
+        (bankStatement) => bankStatement.hash === selectedStatement
+      )?.name
+    );
+    console.log("macroFile:", macroFile);
+    if (!macroFile)
+      return toast.error(toastMessage("Error", "Failed to generate macro."));
+
+    // console.log(macroFile.contents);
+    createAndDownloadFile(macroFile.name, macroFile.contents);
+  }, [codedTransactions, bankStatements, selectedStatement]);
+
   return (
     <div className="mt-2 w-full rounded-md bg-white py-6 pl-6 shadow-md">
       <Header />
@@ -418,9 +442,7 @@ export default function Categorize({
             disabled={
               message || !selectedStatement || !codedTransactions ? true : false
             }
-            onClick={() => {
-              // TODO: export as a macro
-            }}
+            onClick={exportCodedTransactions}
           >
             <Share className="mr-2" size={16} />
             Export Macro
@@ -442,7 +464,7 @@ export default function Categorize({
           />
 
           {/* Code Button */}
-          {codedTransactions.length === 0 && (
+          {codedTransactions.length === 0 ? (
             <button
               className={`mx-auto mt-2 flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
                 message || !selectedStatement || isCoding
@@ -459,6 +481,24 @@ export default function Categorize({
                 size={16}
               />
               {isCoding ? "Coding..." : "Code Transactions"}
+            </button>
+          ) : (
+            // Export Button
+            <button
+              className={`mx-auto mt-4 flex w-fit items-center rounded px-4 py-2 text-white focus:outline-none ${
+                message || !selectedStatement || isCoding
+                  ? "cursor-not-allowed bg-stone-300"
+                  : "bg-stone-500 hover:bg-stone-600"
+              }`}
+              disabled={
+                message || !selectedStatement || !codedTransactions
+                  ? true
+                  : false
+              }
+              onClick={exportCodedTransactions}
+            >
+              <Share className="mr-2" size={16} />
+              Export Macro
             </button>
           )}
         </div>

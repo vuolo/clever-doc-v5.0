@@ -18,7 +18,7 @@ export default function UploadBankStatement({
   user,
   setBankStatements,
 }: Props) {
-  const [parser, setParser] = useState<Parser>("accounting_cs");
+  const [parser, setParser] = useState<Parser>("bofa_business");
   const [files, setFiles] = useState<file_details[]>([]);
 
   // Listen for changes to the file object and sync with the parent component

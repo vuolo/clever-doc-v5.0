@@ -8,6 +8,7 @@ import type { Parser } from "~/types/misc";
 
 import { parseGeneralLedgerFormRecognizerResult_AccountingCS } from "./general-ledgers/pdf/accounting_cs";
 import { parseBankStatementFormRecognizerResult_BofaBusiness } from "./bank-statements/pdf/bofa_business";
+import { parseBankStatementFormRecognizerResult_RegionsBusiness } from "./bank-statements/pdf/regions_business";
 
 export function parseGeneralLedgerFormRecognizerResult(
   result: AnalyzeResult<AnalyzedDocument>,
@@ -28,6 +29,8 @@ export function parseBankStatementFormRecognizerResult(
   switch (bank_name) {
     case "bofa_business":
       return parseBankStatementFormRecognizerResult_BofaBusiness(result);
+    case "regions_business":
+      return parseBankStatementFormRecognizerResult_RegionsBusiness(result);
     default:
       throw new Error(`Unknown bank name: "${bank_name as string}"`);
   }
@@ -38,22 +41,20 @@ import regions_business from "../../../public/images/parsers/regions_business.pn
 import wells_fargo_business from "../../../public/images/parsers/wells_fargo_business.png";
 import accounting_cs from "../../../public/images/parsers/accounting_cs.jpeg";
 
-export function getParserImage(
-  parser: Parser
-) {
-    switch (parser) {
-        case "bofa_business":
-            return bofa_business
-        case "regions_business":
-            return regions_business
-        case "wells_fargo_business":
-            return wells_fargo_business
-        case "accounting_cs":
-            return accounting_cs
-          
-        default:
-            return "";
-    }
+export function getParserImage(parser: Parser) {
+  switch (parser) {
+    case "bofa_business":
+      return bofa_business;
+    case "regions_business":
+      return regions_business;
+    case "wells_fargo_business":
+      return wells_fargo_business;
+    case "accounting_cs":
+      return accounting_cs;
+
+    default:
+      return "";
+  }
 }
 
 export function getParserName(parser: Parser) {
@@ -69,6 +70,6 @@ export function getParserName(parser: Parser) {
     case "quickbooks":
       return "QuickBooks";
     default:
-      return parser
+      return parser;
   }
 }
