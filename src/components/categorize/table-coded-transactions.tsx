@@ -26,6 +26,9 @@ const TableCodedTransactions: React.FC<Props> = ({
   updateSelectedAccount,
 }) => {
   // Bulk edit functionality
+  const [initialBulkEditIndex, setInitialBulkEditIndex] = useState<
+    number | null
+  >(null);
   const [selectedBulkEditTransactions, setSelectedBulkEditTransactions] =
     useState<number[]>([]);
   const toggleTransactionSelection = (index: number) => {
@@ -248,13 +251,15 @@ const TableCodedTransactions: React.FC<Props> = ({
                                   (t) =>
                                     t.coded_entry === transaction.coded_entry
                                 );
-                              if (transactionsWithSameCodedEntry.length > 1)
+                              if (transactionsWithSameCodedEntry.length > 1) {
                                 // 2. Display a modal, with a table of all the transactions with the same coded entry
+                                setInitialBulkEditIndex(index);
                                 openBulkEditModal(
                                   account.number,
                                   transaction.coded_entry
                                 );
-                              else updateSelectedAccount(index, account.number);
+                              } else
+                                updateSelectedAccount(index, account.number);
                             }}
                             className="w-full"
                           >
@@ -360,12 +365,28 @@ const TableCodedTransactions: React.FC<Props> = ({
                                 data-tooltip-content={`${
                                   accountGuess.quantity ?? "0"
                                 } Matches`}
-                                // TODO: also use the same logic for opening the bulk edit modal
                                 onClick={() => {
-                                  updateSelectedAccount(
-                                    index,
-                                    accountGuess.account.number
-                                  );
+                                  // 1. Find all transactions with the same coded entry
+                                  const transactionsWithSameCodedEntry =
+                                    codedTransactions.filter(
+                                      (t) =>
+                                        t.coded_entry ===
+                                        transaction.coded_entry
+                                    );
+                                  if (
+                                    transactionsWithSameCodedEntry.length > 1
+                                  ) {
+                                    // 2. Display a modal, with a table of all the transactions with the same coded entry
+                                    setInitialBulkEditIndex(index);
+                                    openBulkEditModal(
+                                      accountGuess.account.number,
+                                      transaction.coded_entry
+                                    );
+                                  } else
+                                    updateSelectedAccount(
+                                      index,
+                                      accountGuess.account.number
+                                    );
                                 }}
                                 className={`group flex cursor-pointer flex-col items-start justify-between rounded-md border-2 ${
                                   index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
@@ -505,11 +526,18 @@ const TableCodedTransactions: React.FC<Props> = ({
                       type="button"
                       className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:mt-0 sm:w-auto sm:text-sm"
                       onClick={() => {
-                        // TODO: add functionailty to update only this one (need to add a new state when ititializing the modal)
+                        if (
+                          initialBulkEditIndex &&
+                          selectedBulkEditAccountNumber
+                        )
+                          updateSelectedAccount(
+                            initialBulkEditIndex,
+                            selectedBulkEditAccountNumber
+                          );
                         setIsBulkEditOpen(false);
                       }}
                     >
-                      Update Only This One
+                      Update Only This One Instead
                     </button>
                     <button
                       type="button"
