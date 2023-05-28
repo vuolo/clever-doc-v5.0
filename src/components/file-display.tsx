@@ -102,16 +102,18 @@ export default function FileDisplay({
     return () => clearInterval(timer);
   }, [file?.beganProcessingAt, progress]);
 
+  // Process the file
   const reparseFile = useCallback(async () => {
-    // Process the file
     if (!file?.resourceUrl) return;
+    const structure_description = parser as string;
 
     // Reset the file
     if (setParentFile)
       setParentFile((prev) => {
         return {
           ...prev,
-          results: undefined,
+          structure_description,
+          results: undefined as unknown,
           beganProcessingAt: new Date(),
         } as file_details;
       });
@@ -121,15 +123,15 @@ export default function FileDisplay({
           if (prevFile.id === file.id)
             return {
               ...prevFile,
-              results: undefined,
+              structure_description,
+              results: undefined as unknown,
               beganProcessingAt: new Date(),
-            } as unknown as file_details;
+            } as file_details;
           else return prevFile;
         });
       });
 
     console.log("Processing file:", file.resourceUrl);
-    const structure_description = parser;
     const results = await getResults(file.resourceUrl);
     console.log("Results:", results);
     if (setParentFile)
@@ -137,7 +139,7 @@ export default function FileDisplay({
         return {
           ...prev,
           structure_description,
-          results,
+          results: results || [],
           beganProcessingAt: undefined,
         } as file_details;
       });
@@ -148,7 +150,7 @@ export default function FileDisplay({
             return {
               ...prevFile,
               structure_description,
-              results,
+              results: results || [],
               beganProcessingAt: undefined,
             } as file_details;
           else return prevFile;
@@ -159,7 +161,7 @@ export default function FileDisplay({
     await updateFileDetails.mutateAsync({
       hash: file.hash,
       structure_description,
-      results,
+      results: results || [],
     });
   }, [
     file?.id,

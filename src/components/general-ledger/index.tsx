@@ -30,6 +30,7 @@ export default function UploadGeneralLedger({ user, setGeneralLedger }: Props) {
         kind="general_ledger"
         parser={parser}
         user={user}
+        file={file}
         setParentFile={setFile}
       />
       {file?.id && (

@@ -90,7 +90,7 @@ export function makeAccountGuesses_levenshtein(
       const distance = levenshtein.get(codedEntry, entry.description);
       const confidence = 1 - distance / codedEntry.length;
 
-      // For now, we are only including accounts with a confidence score of 0.75 or higher. TODO: fine tune this?
+      // For now, we are only including accounts with a confidence score of 0.75 or higher.
       if (confidence > 0.75)
         account_guesses.push({
           account: {

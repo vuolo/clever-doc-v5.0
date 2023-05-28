@@ -33,6 +33,7 @@ export default function UploadBankStatement({
         kind="bank_statement"
         parser={parser}
         user={user}
+        files={files}
         setParentFiles={setFiles}
       />
       {files.map((file) => (

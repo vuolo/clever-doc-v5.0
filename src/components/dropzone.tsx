@@ -29,6 +29,8 @@ type Props = {
   kind: "general_ledger" | "bank_statement";
   parser: Parser;
   user: User;
+  file?: file_details;
+  files?: file_details[];
   setParentFile?: Dispatch<SetStateAction<file_details | undefined>>;
   setParentFiles?: Dispatch<SetStateAction<file_details[]>>;
 };
@@ -37,22 +39,14 @@ export default function Dropzone({
   kind,
   parser,
   user,
+  file,
+  files,
   setParentFile,
   setParentFiles,
 }: Props) {
   const { supabaseClient: supabase } = useSessionContext();
   const addFileDetails = api.file.addFileDetails.useMutation();
   const updateFileDetails = api.file.updateFileDetails.useMutation();
-
-  // TODO: fix problem when deleting a file from file-display (it updates parentFiles), it doesn't sync here
-  const [file, setFile] = useState<file_details>();
-  const [files, setFiles] = useState<file_details[]>([]);
-
-  // Listen for changes to the file/files object and sync with the parent component
-  useEffect(() => {
-    if (setParentFile) setParentFile({ ...file } as file_details);
-    else if (setParentFiles) setParentFiles([...files] as file_details[]);
-  }, [file, setParentFile, files, setParentFiles, supabase]);
 
   const uploadToFormRecognizer = api.file.uploadToFormRecognizer.useMutation({
     onError: (error) => {
@@ -118,9 +112,9 @@ export default function Dropzone({
           } as file_details;
 
           // Add the new file to the state
-          if (setParentFile) setFile({ ...newFile });
+          if (setParentFile) setParentFile({ ...newFile });
           else if (setParentFiles)
-            setFiles(
+            setParentFiles(
               // don't add the file if the hash already exists
               (prev) =>
                 prev.some((file) => file.hash === newFile.hash)
@@ -154,9 +148,9 @@ export default function Dropzone({
             };
 
             // Update the file state
-            if (setParentFile) setFile({ ...newFile });
+            if (setParentFile) setParentFile({ ...newFile });
             else if (setParentFiles)
-              setFiles((prev) =>
+              setParentFiles((prev) =>
                 prev.map((file) =>
                   file.hash == newFile.hash ? { ...newFile } : { ...file }
                 )
@@ -170,24 +164,24 @@ export default function Dropzone({
               const results = await getResults(resourceUrl);
               console.log("Results:", results);
               if (setParentFile)
-                setFile((prev) =>
+                setParentFile((prev) =>
                   prev?.id == newFile.id
                     ? {
                         ...prev,
                         structure_description,
-                        results,
+                        results: results || [],
                         beganProcessingAt: undefined,
                       }
                     : ({ ...prev } as file_details)
                 );
               else if (setParentFiles)
-                setFiles((prev) =>
+                setParentFiles((prev) =>
                   prev.map((file) =>
                     file.id == newFile.id
                       ? {
                           ...file,
                           structure_description,
-                          results,
+                          results: results || [],
                           beganProcessingAt: undefined,
                         }
                       : ({ ...file } as file_details)
@@ -198,7 +192,7 @@ export default function Dropzone({
               await updateFileDetails.mutateAsync({
                 hash: existingFile.hash,
                 structure_description,
-                results,
+                results: results || [],
               });
             }
           }
@@ -242,9 +236,9 @@ export default function Dropzone({
             };
 
             // Update the file state
-            if (setParentFile) setFile(newFile);
+            if (setParentFile) setParentFile(newFile);
             else if (setParentFiles)
-              setFiles((prev) =>
+              setParentFiles((prev) =>
                 prev.map((file) =>
                   file.hash == newFile.hash ? { ...newFile } : { ...file }
                 )
@@ -261,13 +255,13 @@ export default function Dropzone({
 
             // Update the file in the state
             if (setParentFile)
-              setFile((prev) =>
+              setParentFile((prev) =>
                 prev?.id == newFile.id
                   ? { ...prev, ...newFile, beganProcessingAt: new Date() }
                   : ({ ...prev } as file_details)
               );
             else if (setParentFiles)
-              setFiles((prev) =>
+              setParentFiles((prev) =>
                 prev.map((file) =>
                   file.hash == newFile.hash
                     ? { ...file, ...newFile, beganProcessingAt: new Date() }
@@ -284,24 +278,24 @@ export default function Dropzone({
             const results = await getResults(resourceUrl);
             console.log("Results:", results);
             if (setParentFile)
-              setFile((prev) =>
+              setParentFile((prev) =>
                 prev?.id == newFile.id
                   ? {
                       ...prev,
                       structure_description,
-                      results,
+                      results: results || [],
                       beganProcessingAt: undefined,
                     }
                   : ({ ...prev } as file_details)
               );
             else if (setParentFiles)
-              setFiles((prev) =>
+              setParentFiles((prev) =>
                 prev.map((file) =>
                   file.id == newFile.id
                     ? {
                         ...file,
                         structure_description,
-                        results,
+                        results: results || [],
                         beganProcessingAt: undefined,
                       }
                     : ({ ...file } as file_details)
@@ -312,7 +306,7 @@ export default function Dropzone({
             await updateFileDetails.mutateAsync({
               hash: newFile.hash,
               structure_description,
-              results,
+              results: results || [],
             });
           }
         };
@@ -397,20 +391,20 @@ export default function Dropzone({
               //   });
               //   break;
               case "UPDATE":
-                // Add the UI extension fields to the file
+                // Add the UI extension fields to the file (this only works for single-file dropzones)
                 newFile.isUploading =
                   file?.id == newFile.id && file?.isUploading;
                 newFile.hasError = file?.id == newFile.id && file?.hasError;
 
                 // Update the file in the state
                 if (setParentFile)
-                  setFile((prev) =>
+                  setParentFile((prev) =>
                     prev?.hash == newFile.hash
                       ? { ...prev, ...newFile }
                       : ({ ...prev } as file_details)
                   );
                 else if (setParentFiles)
-                  setFiles((prev) =>
+                  setParentFiles((prev) =>
                     prev.map((file) =>
                       file.hash == newFile.hash
                         ? { ...file, ...newFile }
@@ -422,13 +416,13 @@ export default function Dropzone({
               case "DELETE":
                 // Remove the file from the state
                 if (setParentFile)
-                  setFile((prev) =>
+                  setParentFile((prev) =>
                     prev?.id == oldFile.id
                       ? undefined
                       : ({ ...prev } as file_details)
                   );
                 else if (setParentFiles)
-                  setFiles((prev) =>
+                  setParentFiles((prev) =>
                     prev.filter((file) => file.id != oldFile.id)
                   );
                 break;
