@@ -303,7 +303,7 @@ export default function FileDisplay({
                         Results
                       </Dialog.Title>
                       <div className="mt-2">
-                        <pre className="max-h-[70vh] overflow-y-auto whitespace-pre rounded bg-gray-100 p-4 text-xs sm:text-sm md:text-base lg:text-lg">
+                        <pre className="max-h-[70vh] overflow-y-auto whitespace-pre rounded bg-gray-100 p-4 text-xs">
                           {JSON.stringify(file?.results, null, 2)}
                         </pre>
                       </div>
