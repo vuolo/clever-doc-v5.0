@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Check, ChevronDown, CircleOff } from "lucide-react";
+import { Check, CheckCircle, ChevronDown, CircleOff } from "lucide-react";
 import type { Account } from "~/types/account";
 import type { CodedTransaction } from "~/types/coded-transaction";
 import scanningGif from "../../../public/images/scanning.gif";
@@ -183,7 +183,20 @@ const TableCodedTransactions: React.FC<Props> = ({
                     className="pb-4 pl-4 pr-2 pt-6 text-sm font-bold text-stone-700"
                     style={{ verticalAlign: "top" }}
                   >
-                    {transaction.date}
+                    {/* Green Check */}
+                    <div className="flex items-center gap-2">
+                      {transaction.selected_account.number !==
+                        transaction.account_guesses[0]?.account.number && (
+                        <CheckCircle
+                          data-tooltip-id="account-changed-tooltip"
+                          data-tooltip-content="This icon indicates that you have changed the account for this transaction."
+                          className="text-green-700"
+                          size={16}
+                        />
+                      )}
+                      {/* <Tooltip id="account-changed-tooltip" place="bottom" /> */}
+                      <span>{transaction.date}</span>
+                    </div>
                   </td>
                   <td
                     className="px-2 pb-4 pt-6 text-sm font-medium text-stone-700"
@@ -236,6 +249,18 @@ const TableCodedTransactions: React.FC<Props> = ({
                                 account.number ===
                                 transaction?.selected_account?.number
                             )}
+                            // Highlight the text in the input when it receives focus (click)
+                            onFocus={(event) => {
+                              try {
+                                const target = event.target as HTMLInputElement;
+                                target.setSelectionRange(
+                                  0,
+                                  target.value.length
+                                );
+                              } catch (error) {
+                                // console.error(error);
+                              }
+                            }}
                             onChange={(account) => {
                               // Look for other transactions with the same coded entry,
                               // and update their selected account as well
